@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Models\Core;
+
+use Database\Factories\Core\TenantFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+
+#[Fillable(['name', 'slug', 'is_active'])]
+class Tenant extends Model
+{
+    /** @use HasFactory<TenantFactory> */
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'core_tenants';
+
+    protected static function booted(): void
+    {
+        static::creating(function (Tenant $tenant): void {
+            if (empty($tenant->public_id)) {
+                $tenant->public_id = (string) Str::ulid();
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(\App\Models\User::class, 'tenant_id');
+    }
+}

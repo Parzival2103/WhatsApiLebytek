@@ -43,4 +43,20 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    public function platformAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tenant_id' => null,
+            'is_platform_admin' => true,
+        ]);
+    }
+
+    public function forTenant(\App\Models\Core\Tenant $tenant): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tenant_id' => $tenant->id,
+            'is_platform_admin' => false,
+        ]);
+    }
 }
