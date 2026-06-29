@@ -8,8 +8,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 
+/**
+ * @group Platform
+ * @authenticated
+ */
 class HealthController extends Controller
 {
+    /**
+     * Health check
+     *
+     * Returns database and Redis connectivity for monitoring.
+     */
     public function __invoke(): JsonResponse
     {
         $checks = [

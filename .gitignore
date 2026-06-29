@@ -15,6 +15,10 @@
 /.agents
 /.superpowers
 /.worktrees
+/.scribe
+/public/vendor/scribe
+/resources/views/scribe
+/storage/app/private/scribe
 /auth.json
 /node_modules
 /public/build
