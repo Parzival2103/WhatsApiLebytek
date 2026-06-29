@@ -1,0 +1,12 @@
+{
+    "app": {
+        "name": "WhatsApiLebytek"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "login": "Iniciar sesión"
+    },
+    "welcome": {
+        "title": "Bienvenido"
+    }
+}
