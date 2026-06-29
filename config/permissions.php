@@ -12,5 +12,6 @@ return [
         'usuarios.gestionar',
         'modulos.gestionar',
         'bitacora.ver',
+        'api.health',
     ],
 ];

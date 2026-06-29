@@ -28,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'ensure.api.permission' => \App\Http\Middleware\EnsureApiPermission::class,
+            'webhook.signature' => \App\Http\Middleware\VerifyWebhookSignature::class,
+            'webhook.idempotency' => \App\Http\Middleware\WebhookIdempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
