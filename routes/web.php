@@ -1,19 +1,18 @@
 <?php
 
+use App\Http\Controllers\FaviconController;
+use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\ProfileController;
 use App\Services\DashboardWidgetRegistry;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+    return Inertia::render('Public/Index');
+})->name('public.index');
+
+Route::get('/manifest.webmanifest', ManifestController::class)->name('pwa.manifest');
+Route::get('/favicon.ico', FaviconController::class)->name('pwa.favicon');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

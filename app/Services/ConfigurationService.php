@@ -98,7 +98,7 @@ class ConfigurationService
             ?? throw new \RuntimeException('No tenant available for configuration resolution');
     }
 
-    private function resolveTenantIdOrNull(?int $tenantId = null): ?int
+    public function resolveTenantIdOrNull(?int $tenantId = null): ?int
     {
         if ($tenantId !== null) {
             return $tenantId;
