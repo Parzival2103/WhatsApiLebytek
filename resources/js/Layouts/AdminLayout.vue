@@ -11,11 +11,22 @@ const showingNavigationDropdown = ref(false);
 
 const layoutMode = computed(() => page.props.appConfig?.layoutMode ?? 'side');
 const adminMenu = computed(() => page.props.adminMenu ?? []);
+const themeStyle = computed(() => {
+    const colors = page.props.appConfig?.themeColors ?? {};
+
+    return {
+        '--color-primary': colors.primary ?? '#2563eb',
+        '--color-secondary': colors.secondary ?? '#64748b',
+        '--color-accent': colors.accent ?? '#0ea5e9',
+        '--color-background': colors.background ?? '#f3f4f6',
+        '--color-foreground': colors.foreground ?? '#0f172a',
+    } as Record<string, string>;
+});
 const isSideLayout = computed(() => layoutMode.value === 'side');
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-100">
+    <div class="min-h-screen bg-gray-100" :style="themeStyle">
         <div v-if="isSideLayout" class="flex min-h-screen">
             <aside class="hidden w-64 shrink-0 border-r border-gray-200 bg-white md:block">
                 <div class="flex h-16 items-center border-b border-gray-100 px-4">

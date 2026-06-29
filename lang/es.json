@@ -8,5 +8,19 @@
     },
     "welcome": {
         "title": "Bienvenido"
+    },
+    "config": {
+        "layout_title": "Disposición del menú",
+        "layout_help": "Elige si el menú administrativo se muestra lateral o superior.",
+        "theme_title": "Colores del tema",
+        "theme_help": "Define los tokens de color aplicados como variables CSS.",
+        "branding_title": "Branding y PWA",
+        "branding_help": "Nombre de la app, colores PWA e imágenes de marca.",
+        "app_name": "Nombre de la aplicación",
+        "layout_mode": "Modo de layout",
+        "mode_side": "Menú lateral",
+        "mode_top": "Menú superior",
+        "save": "Guardar cambios",
+        "saved": "Configuración guardada."
     }
 }
