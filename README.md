@@ -1,6 +1,8 @@
 # WhatsApiLebytek
 
-API Laravel intermediaria para **Green API (WhatsApp)**: colas con Redis, workers con Supervisor, webhooks y campañas. Se integra con el SaaS Lebytek en `waapi.lebytek.com`.
+API Laravel intermediaria para **Green API (WhatsApp)**: colas con Redis, workers con Horizon, webhooks y campañas. Se integra con el SaaS Lebytek en `waapi.lebytek.com`.
+
+Este repositorio incluye el **núcleo administrativo Laravel** (Inertia + Vue 3 + multi-tenant + RBAC) sobre el que se montan verticales de negocio.
 
 ## Montaje en producción (VPS)
 
@@ -43,6 +45,62 @@ supervisorctl restart lebytek-api-worker:*
 
 ## Stack previsto
 
-- Laravel 11+ · Redis · Horizon (fase 2) · Green API · Jobs/colas
+- Laravel 11+ · Redis · Horizon · Green API · Jobs/colas · Sanctum · Inertia + Vue 3
 
-Ver `docs/DEPLOY.md` y `prompt2-laravel-nucleo.md` (spec del núcleo admin) en el repo del framework si aplica.
+Ver `docs/DEPLOY.md` y `docs/spec/prompt2-laravel-nucleo.md`.
+
+## Núcleo local (worktree / rama `feature/nucleo-laravel`)
+
+```bash
+cd .worktrees/feature-nucleo-laravel   # o raíz si ya mergeado
+cp .env.example .env
+composer install
+php artisan key:generate
+php artisan migrate:fresh --seed
+npm install && npm run build
+php artisan serve
+```
+
+- Panel admin: `/admin/login` — `admin@sistema.local` / `password` (cambiar antes de producción)
+- API health: `GET /api/v1/health` con token Sanctum
+- OpenAPI: `php artisan scribe:generate` → `/docs`
+
+## Cómo agregar un vertical de dominio
+
+Sigue estas convenciones para montar un módulo de negocio **sin modificar el núcleo**:
+
+1. **Tablas** — Prefijo `dom_*` (reservado para verticales). Toda tabla propia lleva `tenant_id` FK a `core_tenants`.
+2. **Modelos** — Usa el trait `App\Models\Concerns\BelongsToTenant` y declara `protected $table = 'dom_mi_recurso'`. Clave pública **ULID** (`public_id`) como route key; PK interna autoincremental.
+3. **API** — Controllers en `app/Http/Controllers/Api/V1/`, respuestas con **API Resources** (JSON camelCase), rutas bajo `/api/v1/...` con `auth:sanctum`, `ensure.api.permission` y middleware `permission:modulo.accion`.
+4. **Permisos** — Slug `modulo.accion` (ej. `campanias.crear`). Regístralos en seeders/config y asígnalos a roles vía spatie.
+5. **Menú admin** — Inserta filas en `core_menu_items` (global o por tenant) con el permiso correspondiente.
+6. **Toggle de módulo** — Declara disponibilidad en `config/vertical.php`; estado on/off autoritativo en `core_modules` por tenant.
+7. **Colas** — Usa colas `transactional` o `campaigns` según prioridad; jobs con idempotencia y rate-limit Redis (ver stubs en `app/Jobs/`).
+8. **No tocar** tablas nativas de terceros (`users`, `roles`, `permissions`, `jobs`, etc.).
+
+Ejemplo mínimo de modelo de vertical:
+
+```php
+namespace App\Models\Domain\Campaña;
+
+use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+
+class Campaña extends Model
+{
+    use BelongsToTenant;
+
+    protected $table = 'dom_campanias';
+
+    protected static function booted(): void
+    {
+        static::creating(fn (self $m) => $m->public_id ??= (string) Str::ulid());
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+}
+```
