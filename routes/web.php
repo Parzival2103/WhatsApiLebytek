@@ -29,6 +29,14 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
     Route::get('/config/layout', function () {
         return Inertia::render('Admin/Config/Layout');
     })->middleware('permission:configuracion.gestionar')->name('admin.config.layout');
+
+    Route::post('/archivos', [\App\Http\Controllers\Admin\ArchivoController::class, 'store'])
+        ->middleware('permission:configuracion.gestionar')
+        ->name('admin.archivos.store');
+
+    Route::get('/archivos/{archivo:public_id}', [\App\Http\Controllers\Admin\ArchivoController::class, 'show'])
+        ->middleware('permission:configuracion.gestionar')
+        ->name('admin.archivos.show');
 });
 
 Route::middleware('auth')->group(function () {

@@ -60,7 +60,26 @@ return [
             'report' => false,
         ],
 
+        'uploads' => [
+            'driver' => 'local',
+            'root' => storage_path('app/uploads'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Uploads Disk
+    |--------------------------------------------------------------------------
+    |
+    | Use S3-compatible storage in production (set UPLOADS_DISK=s3).
+    |
+    */
+
+    'uploads_disk' => env('UPLOADS_DISK', 'uploads'),
 
     /*
     |--------------------------------------------------------------------------
