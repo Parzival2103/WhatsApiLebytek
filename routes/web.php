@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Services\DashboardWidgetRegistry;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,8 +20,10 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+    Route::get('/dashboard', function (DashboardWidgetRegistry $widgets) {
+        return Inertia::render('Dashboard', [
+            'dashboardWidgets' => $widgets->forUser(auth()->user()),
+        ]);
     })->middleware('permission:dashboard.ver')->name('admin.dashboard');
 
     Route::get('/config/layout', function () {
