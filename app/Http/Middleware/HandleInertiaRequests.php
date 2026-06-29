@@ -36,6 +36,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'appConfig' => fn () => app(ConfigurationService::class)->getPublicSnapshot(),
+            'adminMenu' => fn () => $request->user()
+                ? app(\App\Services\AdminMenuService::class)->forUser($request->user())
+                : [],
         ];
     }
 }
