@@ -18,8 +18,14 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::prefix('admin')->group(function (): void {
-    // Nucleo admin routes (config, dashboard shell) registered in later tasks.
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->middleware('permission:dashboard.ver')->name('admin.dashboard');
+
+    Route::get('/config/layout', function () {
+        return Inertia::render('Admin/Config/Layout');
+    })->middleware('permission:configuracion.gestionar')->name('admin.config.layout');
 });
 
 Route::middleware('auth')->group(function () {
