@@ -14,6 +14,10 @@ class ConfigurationService
 {
     private const CACHE_TTL_SECONDS = 3600;
 
+    public function __construct(
+        private readonly AuditLogService $auditLog,
+    ) {}
+
     public function get(ConfigurationKey $key, ?int $tenantId = null): mixed
     {
         $tenantId = $this->resolveTenantId($tenantId);
@@ -34,6 +38,13 @@ class ConfigurationService
         $validated = ConfigurationRegistry::validate($key, $value);
         $tenantId = $this->resolveTenantId($actor->tenant_id);
 
+        $existing = Configuracion::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('key', $key->value)
+            ->first();
+
+        $before = $existing?->value;
+
         Configuracion::withoutGlobalScopes()->updateOrCreate(
             [
                 'tenant_id' => $tenantId,
@@ -45,6 +56,15 @@ class ConfigurationService
         );
 
         Cache::forget($this->cacheKey($tenantId, $key));
+
+        $this->auditLog->record(
+            action: 'config.updated',
+            actor: $actor,
+            subject: $existing,
+            before: is_array($before) ? $before : ['value' => $before],
+            after: is_array($validated) ? $validated : ['value' => $validated],
+            request: request(),
+        );
 
         return $validated;
     }

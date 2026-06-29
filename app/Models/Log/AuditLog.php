@@ -18,6 +18,12 @@ class AuditLog extends Model
 
     public $timestamps = false;
 
+    protected static function booted(): void
+    {
+        static::updating(fn () => false);
+        static::deleting(fn () => false);
+    }
+
     protected function casts(): array
     {
         return [
