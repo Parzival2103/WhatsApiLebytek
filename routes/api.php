@@ -8,3 +8,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'ensure.api.permission'])->grou
         ->middleware('permission:api.health')
         ->name('api.v1.health');
 });
+
+Route::prefix('v1/webhooks')->middleware(['webhook.signature', 'webhook.idempotency'])->group(function (): void {
+    Route::post('/incoming', function () {
+        return response()->json(['received' => true, 'duplicate' => false]);
+    })->name('api.v1.webhooks.incoming');
+});
