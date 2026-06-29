@@ -12,6 +12,9 @@
 /.phpunit.cache
 /.vscode
 /.zed
+/.agents
+/.superpowers
+/.worktrees
 /auth.json
 /node_modules
 /public/build
