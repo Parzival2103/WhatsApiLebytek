@@ -11,4 +11,4 @@ if (! $scribeInstalled) {
     ];
 }
 
-return require __DIR__.'/scribe.full.php';
+return require __DIR__.'/scribe/full.php';
