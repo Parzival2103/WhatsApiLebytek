@@ -1,6 +1,10 @@
-# Contrato API — waapi ↔ api.lebytek.com
+# Contrato API — api.lebytek.com
 
-Contrato técnico de integración entre el SaaS **waapi.lebytek.com** (Lebytek Framework) y el motor **api.lebytek.com** (WhatsApiLebytek / Laravel).
+Contrato técnico de integración del motor **api.lebytek.com** (WhatsApiLebytek / Laravel) con sus tres consumidores:
+
+- **Back-office de `lebytek.com`** (capa de adquisición/leads): provisiona tenants e instancias con el **token de plataforma** al aprobar un lead.
+- **Cliente final**: llama a api directamente con un **token por-tenant** (envío, lectura de su instancia/estado).
+- **Panel `waapi.lebytek.com`**: panel de **lectura** del cliente (consumo, fallos, adeudos, facturación futura).
 
 **Versión:** `v1`  
 **Base URL:** `https://api.lebytek.com/api/v1`  
@@ -8,18 +12,37 @@ Contrato técnico de integración entre el SaaS **waapi.lebytek.com** (Lebytek F
 
 ---
 
-## Modelo de autenticación
+## Modelo de autenticación (dos tokens)
 
-waapi usa **una cuenta de servicio de plataforma** (token Sanctum único). No hay tokens por cliente en fase 1.
+api expone **dos tipos de token Sanctum**. El tenant en contexto lo resuelve `ResolveActingTenant`.
+
+### 1. Token de plataforma (back-office de lebytek.com)
+
+Cuenta de servicio única que provisiona y administra. Lo usa el back-office de `lebytek.com`, **no** el cliente ni waapi.
 
 | Elemento | Valor |
 |----------|-------|
 | Header | `Authorization: Bearer {LEBYTEK_API_TOKEN}` |
 | Emisión del token | En el VPS api: `php artisan integration:issue-waapi-token` |
-| Usuario api | `WAAPI_SERVICE_EMAIL` (platform admin, `tenant_id = null`) |
-| Permisos | `api.health`, `tenants.ver`, `tenants.provisionar`, `tenants.gestionar` |
+| Usuario api | `PLATFORM_SERVICE_EMAIL` (platform admin, `tenant_id = null`) |
+| Permisos | `api.health`, `tenants.ver`, `tenants.provisionar`, `tenants.gestionar`, `instancias.ver`, `instancias.crear`, `instancias.eliminar` |
 
-El token se guarda en waapi como `LEBYTEK_API_TOKEN` (secreto, nunca en repositorio).
+El token se guarda en el back-office como `LEBYTEK_API_TOKEN` (secreto, nunca en repositorio).
+
+### 2. Token por-tenant (cliente)
+
+api emite un token Sanctum propio del tenant durante el provisioning (ver `POST /tenants/{publicId}/tokens`). El **cliente final** lo usa para llamar a api directamente; el **panel waapi** lo usa para leer datos del tenant.
+
+| Elemento | Valor |
+|----------|-------|
+| Header | `Authorization: Bearer {token por-tenant}` |
+| Emisión | `POST /tenants/{publicId}/tokens` (solo token de plataforma) — devuelto **una sola vez** en claro |
+| Confinamiento | confinado a su propio `tenant_id`; **ignora** `X-Tenant-Id` |
+| Permisos | `instancias.ver` (lectura de su instancia/estado/QR); en Fase 2 de envío: `mensajes.enviar`, etc. |
+
+El back-office entrega este token al cliente en el "2º correo" (junto al enlace/login a waapi). Pago manual (correo/transferencia) lo gestiona `lebytek.com`.
+
+> **El `apiTokenInstance` crudo de Green API nunca se expone** en respuestas ni correos. El producto es gestionado: el cliente usa su token Lebytek contra `api.lebytek.com`, no Green API directo.
 
 ---
 
@@ -35,12 +58,12 @@ El token se guarda en waapi como `LEBYTEK_API_TOKEN` (secreto, nunca en reposito
 
 ### `X-Tenant-Id`
 
-Cuando waapi opera en nombre de un cliente con el token de plataforma:
+Cuando el back-office opera en nombre de un cliente con el token de plataforma:
 
 - En rutas **sin** `{tenant}` en el path (futuro vertical WhatsApp), enviar `X-Tenant-Id: {publicId}`.
 - En rutas con `{tenant}` en el path (`/tenants/{publicId}`), el path es suficiente; el header es opcional.
 - Si el header apunta a un ULID inexistente → `404`.
-- Usuarios no platform ignoran el header (quedan confinados a su `tenant_id`).
+- El **token por-tenant del cliente** ignora el header (queda confinado a su `tenant_id`).
 
 ---
 
@@ -182,6 +205,44 @@ waapi debe persistir `publicId` en su tabla `organizations.api_tenant_public_id`
 
 ---
 
+### `POST /tenants/{publicId}/tokens`
+
+**Permiso:** `tenants.gestionar`  
+**Acceso:** solo cuenta de plataforma (back-office)  
+**Idempotency-Key:** requerido
+
+Emite un **token Sanctum por-tenant** para que el cliente final llame a api directamente y el panel waapi lea sus datos. El back-office lo entrega al cliente en el 2º correo.
+
+**Body:**
+
+```json
+{
+  "name": "cliente-acme",
+  "abilities": ["instancias.ver"]
+}
+```
+
+| Campo | Tipo | Reglas |
+|-------|------|--------|
+| `name` | string | requerido; etiqueta del token (p. ej. `cliente-{slug}`) |
+| `abilities` | array | opcional; default a los permisos del rol cliente del tenant |
+
+**Respuesta 201:**
+
+```json
+{
+  "publicId": "01JABCD...",
+  "token": "12|abcdef...",
+  "name": "cliente-acme",
+  "abilities": ["instancias.ver"],
+  "createdAt": "2026-06-30T12:00:00+00:00"
+}
+```
+
+> El campo `token` (texto en claro) se devuelve **una sola vez**; api guarda solo su hash (mecanismo estándar de Sanctum). Para rotar, emitir uno nuevo y revocar el anterior. El token queda confinado al `tenant_id` del path e ignora `X-Tenant-Id`.
+
+---
+
 ## Webhooks entrantes (Green API → api)
 
 **No consumidos por waapi.** Green API envía eventos solo a api.
@@ -215,20 +276,26 @@ Todas las rutas fase 2 requerirán `X-Tenant-Id` con token de plataforma salvo q
 
 ---
 
-## Flujo de onboarding (waapi)
+## Flujo de onboarding (back-office de lebytek.com)
 
 ```mermaid
 sequenceDiagram
-    participant User as Usuario
-    participant W as waapi
+    participant Lead as Lead
+    participant L as lebytek.com (back-office)
     participant A as api
+    participant C as Cliente
 
-    User->>W: Registro / crea Organization
-    W->>A: POST /tenants externalRef=waapi_org_ID
-    A-->>W: 201 publicId
-    W->>W: Guarda api_tenant_public_id
-    W->>A: GET /health
-    A-->>W: 200 ok
+    Lead->>L: Solicita demo (formulario)
+    L->>L: Admin aprueba lead + cobro manual
+    L->>A: POST /tenants externalRef=lead_ID
+    A-->>L: 201 publicId
+    L->>A: POST /instances (X-Tenant-Id, externalRef)
+    A-->>L: 202 status=provisioning
+    L->>A: POST /tenants/{publicId}/tokens
+    A-->>L: 201 token por-tenant (una sola vez)
+    L->>C: 2º correo (token por-tenant + enlace waapi)
+    C->>A: GET /instances/{publicId}/qr (token por-tenant)
+    A-->>C: QR → vincula WhatsApp
 ```
 
 ---
@@ -244,11 +311,11 @@ php artisan integration:issue-waapi-token --revoke
 Variables api relevantes:
 
 ```env
-WAAPI_SERVICE_EMAIL=waapi-service@lebytek.internal
-WAAPI_SERVICE_NAME="waapi Platform Service"
+PLATFORM_SERVICE_EMAIL=platform-service@lebytek.internal
+PLATFORM_SERVICE_NAME="Lebytek Platform Service"
 ```
 
-Variables waapi:
+Variables del back-office (lebytek.com):
 
 ```env
 LEBYTEK_API_URL=https://api.lebytek.com/api/v1
