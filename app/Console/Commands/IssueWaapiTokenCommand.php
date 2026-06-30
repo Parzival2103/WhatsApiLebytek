@@ -34,7 +34,7 @@ class IssueWaapiTokenCommand extends Command
         $token = $serviceUser->createToken($this->option('name'));
 
         $this->newLine();
-        $this->line('Copy this token into waapi .env as LEBYTEK_API_TOKEN:');
+        $this->line('Copy this token into lebytek.com .env as LEBYTEK_API_TOKEN:');
         $this->newLine();
         $this->warn($token->plainTextToken);
         $this->newLine();

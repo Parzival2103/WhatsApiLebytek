@@ -16,11 +16,14 @@ return [
         'tenants.ver',
         'tenants.provisionar',
         'tenants.gestionar',
+        'instancias.ver',
+        'instancias.crear',
+        'instancias.eliminar',
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | waapi platform service (Sanctum guard)
+    | Platform service (Sanctum guard) — back-office lebytek.com
     |--------------------------------------------------------------------------
     */
     'platform_service' => [
@@ -28,5 +31,8 @@ return [
         'tenants.ver',
         'tenants.provisionar',
         'tenants.gestionar',
+        'instancias.ver',
+        'instancias.crear',
+        'instancias.eliminar',
     ],
 ];

@@ -238,6 +238,18 @@ return [
             'timeout' => 300,
             'nice' => 0,
         ],
+        'supervisor-provisioning' => [
+            'connection' => 'redis',
+            'queue' => ['provisioning'],
+            'balance' => 'simple',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [

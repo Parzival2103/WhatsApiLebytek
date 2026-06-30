@@ -39,4 +39,11 @@ return [
         'secret' => env('WEBHOOK_SECRET'),
     ],
 
+    'green_api' => [
+        'base_url' => env('GREEN_API_BASE_URL', 'https://api.green-api.com'),
+        'partner_token' => env('GREEN_API_PARTNER_TOKEN'),
+        'webhook_url' => env('GREEN_API_WEBHOOK_URL', env('APP_URL').'/api/v1/webhooks/incoming'),
+        'webhook_secret' => env('WEBHOOK_SECRET'),
+    ],
+
 ];

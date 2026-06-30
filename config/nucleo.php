@@ -25,11 +25,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | waapi platform service account (Sanctum)
+    | Platform service account (Sanctum) — back-office lebytek.com
     |--------------------------------------------------------------------------
+    | PLATFORM_SERVICE_* replaces WAAPI_SERVICE_* (legacy env names still work).
     */
 
-    'waapi_service_email' => env('WAAPI_SERVICE_EMAIL', 'waapi-service@lebytek.internal'),
-    'waapi_service_name' => env('WAAPI_SERVICE_NAME', 'waapi Platform Service'),
+    'platform_service_email' => env('PLATFORM_SERVICE_EMAIL', env('WAAPI_SERVICE_EMAIL', 'platform-service@lebytek.internal')),
+    'platform_service_name' => env('PLATFORM_SERVICE_NAME', env('WAAPI_SERVICE_NAME', 'Lebytek Platform Service')),
+
+    // @deprecated Use platform_service_email / platform_service_name
+    'waapi_service_email' => env('PLATFORM_SERVICE_EMAIL', env('WAAPI_SERVICE_EMAIL', 'platform-service@lebytek.internal')),
+    'waapi_service_name' => env('PLATFORM_SERVICE_NAME', env('WAAPI_SERVICE_NAME', 'Lebytek Platform Service')),
 
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Core\Module;
 use App\Models\Core\Tenant;
 use Database\Seeders\CoreSeeder;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,11 @@ class TenantProvisioningService
             ]);
 
             $this->coreSeeder->seedModulesAndMenu($tenant);
+
+            Module::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('module_key', 'whatsapp')
+                ->update(['is_enabled' => true]);
 
             return $tenant->fresh();
         });

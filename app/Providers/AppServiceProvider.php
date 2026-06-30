@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Core\MenuItem;
 use App\Observers\MenuItemObserver;
+use App\Services\GreenApi\PartnerClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -17,7 +18,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(PartnerClient::class, function () {
+            return new PartnerClient(
+                (string) config('services.green_api.base_url'),
+                config('services.green_api.partner_token'),
+            );
+        });
     }
 
     /**

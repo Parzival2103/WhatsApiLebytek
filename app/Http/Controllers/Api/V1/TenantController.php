@@ -4,22 +4,27 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreTenantRequest;
+use App\Http\Requests\Api\V1\StoreTenantTokenRequest;
 use App\Http\Requests\Api\V1\UpdateTenantRequest;
 use App\Http\Resources\Api\V1\TenantResource;
+use App\Http\Resources\Api\V1\TenantTokenResource;
 use App\Models\Core\Tenant;
 use App\Services\TenantProvisioningService;
+use App\Services\TenantTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * @group Tenants
+ *
  * @authenticated
  */
 class TenantController extends Controller
 {
     public function __construct(
         private readonly TenantProvisioningService $provisioningService,
+        private readonly TenantTokenService $tenantTokenService,
     ) {}
 
     /**
@@ -81,6 +86,29 @@ class TenantController extends Controller
         $tenant = $this->provisioningService->update($tenant, $request->validated());
 
         return new TenantResource($tenant);
+    }
+
+    /**
+     * Issue tenant API token
+     *
+     * Platform service only. Returns plain token once.
+     */
+    public function issueToken(StoreTenantTokenRequest $request, Tenant $tenant): JsonResponse
+    {
+        $this->ensurePlatformService($request);
+
+        $validated = $request->validated();
+        $abilities = $validated['abilities'] ?? ['instancias.ver'];
+
+        $accessToken = $this->tenantTokenService->issue(
+            $tenant,
+            $validated['name'],
+            $abilities,
+        );
+
+        return (new TenantTokenResource($accessToken))
+            ->response()
+            ->setStatusCode(201);
     }
 
     private function ensurePlatformService(Request $request): void

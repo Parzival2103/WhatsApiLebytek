@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Services\GreenApi;
+
+use App\Exceptions\GreenApiException;
+use Illuminate\Support\Facades\Http;
+
+class InstanceClient
+{
+    public function __construct(
+        private readonly string $baseUrl,
+        private readonly string $idInstance,
+        private readonly string $apiTokenInstance,
+    ) {}
+
+    public function getStateInstance(): string
+    {
+        $url = $this->instanceUrl('getStateInstance');
+        $response = Http::timeout(15)->get($url);
+
+        if (! $response->successful()) {
+            throw new GreenApiException(
+                'getStateInstance failed: '.$response->body(),
+                $response->status(),
+                $response->json(),
+            );
+        }
+
+        return (string) ($response->json('stateInstance') ?? '');
+    }
+
+    /**
+     * @return array{qr: string, type: string}
+     */
+    public function qr(): array
+    {
+        $url = $this->instanceUrl('qr');
+        $response = Http::timeout(15)->get($url);
+
+        if (! $response->successful()) {
+            throw new GreenApiException(
+                'qr failed: '.$response->body(),
+                $response->status(),
+                $response->json(),
+            );
+        }
+
+        $json = $response->json();
+
+        return [
+            'qr' => (string) ($json['message'] ?? ''),
+            'type' => (string) ($json['type'] ?? ''),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    public function setSettings(array $settings): void
+    {
+        $url = $this->instanceUrl('setSettings');
+        $response = Http::timeout(15)->post($url, $settings);
+
+        if (! $response->successful()) {
+            throw new GreenApiException(
+                'setSettings failed: '.$response->body(),
+                $response->status(),
+                $response->json(),
+            );
+        }
+    }
+
+    private function instanceUrl(string $method): string
+    {
+        return rtrim($this->baseUrl, '/')."/waInstance{$this->idInstance}/{$method}/{$this->apiTokenInstance}";
+    }
+}
