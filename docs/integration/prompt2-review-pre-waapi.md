@@ -1,5 +1,8 @@
 # Revisión pre-waapi — cumplimiento de prompt2.md
 
+> **Documento histórico** — auditoría del núcleo api antes del pivot a lebytek.com como consumidor.  
+> Consumidor actual: **back-office lebytek.com**. Ver [role-delegation-lebytek-api.md](role-delegation-lebytek-api.md).
+
 Auditoría exhaustiva del núcleo **WhatsApiLebytek** contra [`prompt2.md`](../../prompt2.md) y la capa de integración waapi, realizada antes de construir el lado waapi.
 
 **Veredicto general:** el núcleo está **listo para integrar waapi en fase 1** (provisioning + health). El núcleo administrativo cumple ~**80–85%** del prompt2. Las brechas restantes son mayormente P2 (observabilidad, 2FA, vertical WhatsApp, enforcement de módulos) y no bloquean la conexión waapi.
@@ -102,7 +105,7 @@ Auditoría exhaustiva del núcleo **WhatsApiLebytek** contra [`prompt2.md`](../.
 1. **HTTP:** `Idempotency-Key` — evita duplicar la misma petición HTTP (reintentos de red).
 2. **Negocio:** `externalRef` en `POST /tenants` — evita duplicar tenants waapi aunque cambie el `Idempotency-Key`.
 
-waapi debe implementar **ambas** (ver `waapi-implementation-real.md`).
+back-office debe implementar **ambas** (ver [lebytek-implementation-real.md](lebytek-implementation-real.md)).
 
 ---
 
@@ -154,7 +157,7 @@ waapi debe implementar **ambas** (ver `waapi-implementation-real.md`).
 
 1. Emitir token: `php artisan integration:issue-waapi-token --revoke` en api (prod).
 2. Configurar waapi `.env` con `LEBYTEK_API_URL` y `LEBYTEK_API_TOKEN`.
-3. Seguir [`waapi-implementation-real.md`](waapi-implementation-real.md) — implementación espejo de medidas api.
+3. Seguir [lebytek-implementation-real.md](lebytek-implementation-real.md) — implementación espejo de medidas api.
 
 ### Recomendado en api (no bloqueante)
 
@@ -177,6 +180,6 @@ waapi debe implementar **ambas** (ver `waapi-implementation-real.md`).
 | ¿prompt2 núcleo entregado? | **Sí**, con gaps P2 documentados |
 | ¿Seguridad robusta para fase 1 waapi? | **Sí**, con rotación de token y secretos en vault |
 | ¿Deuda técnica crítica mitigada? | **Sí** |
-| ¿Listo para construir waapi? | **Sí** — usar `waapi-implementation-real.md` |
+| ¿Listo para construir back-office? | **Sí** — usar [lebytek-implementation-real.md](lebytek-implementation-real.md) |
 
 **Siguiente paso:** implementar cliente HTTP y provisioning en `Lebytek_Framework` siguiendo la guía real, no reimplementar lógica del núcleo Laravel.
