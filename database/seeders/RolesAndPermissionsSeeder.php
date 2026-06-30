@@ -25,5 +25,18 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $apiAdminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']);
         $apiAdminRole->syncPermissions(Permission::where('guard_name', 'sanctum')->get());
+
+        $platformPermissions = config('permissions.platform_service', []);
+
+        foreach ($platformPermissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'sanctum']);
+        }
+
+        $platformServiceRole = Role::firstOrCreate(['name' => 'platform-service', 'guard_name' => 'sanctum']);
+        $platformServiceRole->syncPermissions(
+            Permission::where('guard_name', 'sanctum')
+                ->whereIn('name', $platformPermissions)
+                ->get()
+        );
     }
 }

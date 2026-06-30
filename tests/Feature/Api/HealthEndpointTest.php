@@ -26,5 +26,6 @@ test('api v1 health returns database and redis checks', function () {
             'status',
             'checks' => ['database', 'redis'],
             'timestamp',
+            'actingTenant',
         ]);
 });

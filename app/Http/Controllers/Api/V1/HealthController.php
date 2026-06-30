@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\HealthResource;
+use App\Models\Core\Tenant;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -30,11 +32,25 @@ class HealthController extends Controller
             ? 'ok'
             : 'degraded';
 
-        return (new HealthResource([
+        $payload = [
             'status' => $status,
             'checks' => $checks,
             'timestamp' => now()->toIso8601String(),
-        ]))->response();
+            'actingTenant' => $this->resolveActingTenantPublicId(),
+        ];
+
+        return (new HealthResource($payload))->response();
+    }
+
+    private function resolveActingTenantPublicId(): ?string
+    {
+        $tenantId = TenantContext::id();
+
+        if ($tenantId === null) {
+            return null;
+        }
+
+        return Tenant::query()->whereKey($tenantId)->value('public_id');
     }
 
     /**

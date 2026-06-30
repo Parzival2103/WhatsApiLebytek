@@ -24,6 +24,7 @@ class HealthResource extends ApiResource
             'status' => $this->resource['status'],
             'checks' => $this->resource['checks'],
             'timestamp' => $this->resource['timestamp'],
+            'actingTenant' => $this->resource['actingTenant'] ?? null,
         ];
     }
 }

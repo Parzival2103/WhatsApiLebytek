@@ -75,6 +75,8 @@ php artisan serve
 
 - Panel admin: `/admin/login` — `admin@sistema.local` / `password` (cambiar antes de producción)
 - API health: `GET /api/v1/health` con token Sanctum
+- Provisioning tenants (waapi): `POST /api/v1/tenants` — ver `docs/integration/waapi-api-contract.md`
+- Token plataforma waapi: `php artisan integration:issue-waapi-token`
 - OpenAPI: `php artisan scribe:generate` → `/docs`
 
 ## Cómo agregar un vertical de dominio

@@ -55,3 +55,35 @@ function something()
 {
     // ..
 }
+
+function createPlatformServiceUser(): \App\Models\User
+{
+    $permissions = config('permissions.platform_service', []);
+
+    $user = \App\Models\User::factory()->platformAdmin()->create([
+        'email' => 'waapi-service@test.local',
+    ]);
+
+    $user->syncPermissions(
+        \Spatie\Permission\Models\Permission::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', $permissions)
+            ->get()
+    );
+
+    return $user;
+}
+
+function platformServiceToken(?\App\Models\User $user = null): string
+{
+    $user ??= createPlatformServiceUser();
+
+    return $user->createToken('waapi-test')->plainTextToken;
+}
+
+function idempotencyHeaders(): array
+{
+    return [
+        'Idempotency-Key' => (string) \Illuminate\Support\Str::uuid(),
+    ];
+}

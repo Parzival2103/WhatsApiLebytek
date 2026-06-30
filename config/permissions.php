@@ -13,5 +13,20 @@ return [
         'modulos.gestionar',
         'bitacora.ver',
         'api.health',
+        'tenants.ver',
+        'tenants.provisionar',
+        'tenants.gestionar',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | waapi platform service (Sanctum guard)
+    |--------------------------------------------------------------------------
+    */
+    'platform_service' => [
+        'api.health',
+        'tenants.ver',
+        'tenants.provisionar',
+        'tenants.gestionar',
     ],
 ];

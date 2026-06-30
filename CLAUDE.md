@@ -37,3 +37,9 @@ php artisan queue:work redis
 ## Integración con waapi
 
 El SaaS en waapi consume esta API (REST `/api/v1`, Sanctum). No duplicar lógica Green API en el framework PHP del skeleton.
+
+- Contrato: [`docs/integration/waapi-api-contract.md`](docs/integration/waapi-api-contract.md)
+- Delegación de roles: [`docs/integration/role-delegation-waapi.md`](docs/integration/role-delegation-waapi.md)
+- Implementación waapi (guía real): [`docs/integration/waapi-implementation-real.md`](docs/integration/waapi-implementation-real.md)
+- Auditoría prompt2: [`docs/integration/prompt2-review-pre-waapi.md`](docs/integration/prompt2-review-pre-waapi.md)
+- Token de plataforma: `php artisan integration:issue-waapi-token`

@@ -23,4 +23,13 @@ return [
     'admin_initial_name' => env('ADMIN_INITIAL_NAME', 'Administrador'),
     'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | waapi platform service account (Sanctum)
+    |--------------------------------------------------------------------------
+    */
+
+    'waapi_service_email' => env('WAAPI_SERVICE_EMAIL', 'waapi-service@lebytek.internal'),
+    'waapi_service_name' => env('WAAPI_SERVICE_NAME', 'waapi Platform Service'),
+
 ];

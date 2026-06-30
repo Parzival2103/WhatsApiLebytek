@@ -27,8 +27,10 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/tools
 /vendor
 _ide_helper.php
+prompt2.md
 Homestead.json
 Homestead.yaml
 Thumbs.db

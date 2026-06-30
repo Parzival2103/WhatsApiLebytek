@@ -46,5 +46,7 @@ class ProductionSeeder extends Seeder
         $admin->assignRole(Role::findByName('admin', 'web'));
 
         (new CoreSeeder)->seedModulesAndMenu($tenant);
+
+        $this->call(WaapiServiceSeeder::class);
     }
 }

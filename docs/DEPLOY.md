@@ -139,6 +139,13 @@ curl -sfI https://api.lebytek.com/ | head -1
 # Horizon (auth requerida): https://api.lebytek.com/horizon
 # API health (Sanctum token + permiso api.health):
 # curl -H "Authorization: Bearer <token>" https://api.lebytek.com/api/v1/health
+# Provisioning tenant (waapi):
+# curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+#   -H "Idempotency-Key: $(uuidgen)" \
+#   -d '{"name":"Test","slug":"test","externalRef":"waapi_org_1"}' \
+#   https://api.lebytek.com/api/v1/tenants
+# Emitir token plataforma waapi:
+# php artisan integration:issue-waapi-token --revoke
 ```
 
 Checklist:

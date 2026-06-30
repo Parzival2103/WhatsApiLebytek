@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             \App\Http\Middleware\SetTenantContext::class,
+            \App\Http\Middleware\ResolveActingTenant::class,
         ]);
 
         $middleware->alias([
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhook.idempotency' => \App\Http\Middleware\WebhookIdempotency::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'api.idempotency' => \App\Http\Middleware\ApiIdempotencyKey::class,
+            'acting.tenant' => \App\Http\Middleware\ResolveActingTenant::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

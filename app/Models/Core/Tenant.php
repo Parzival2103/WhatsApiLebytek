@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'slug', 'is_active'])]
+#[Fillable(['name', 'slug', 'external_ref', 'is_active'])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */
