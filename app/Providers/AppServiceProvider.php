@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Core\MenuItem;
+use App\Observers\MenuItemObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        MenuItem::observe(MenuItemObserver::class);
+
         Vite::prefetch(concurrency: 3);
 
         RateLimiter::for('api', function (Request $request) {

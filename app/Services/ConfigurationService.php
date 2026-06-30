@@ -14,13 +14,35 @@ class ConfigurationService
 {
     private const CACHE_TTL_SECONDS = 3600;
 
+    /** @var list<ConfigurationKey> */
+    private const BRANDING_KEYS = [
+        ConfigurationKey::AppName,
+        ConfigurationKey::PwaThemeColor,
+        ConfigurationKey::PwaBackgroundColor,
+        ConfigurationKey::LogoArchivoId,
+        ConfigurationKey::FaviconArchivoId,
+        ConfigurationKey::PwaIconArchivoId,
+    ];
+
+    /** @var list<ConfigurationKey> */
+    private const LAYOUT_KEYS = [
+        ConfigurationKey::LayoutMode,
+    ];
+
     public function __construct(
         private readonly AuditLogService $auditLog,
+        private readonly AdminMenuService $adminMenu,
+        private readonly BrandingAssetService $brandingAssets,
     ) {}
 
     public function get(ConfigurationKey $key, ?int $tenantId = null): mixed
     {
-        $tenantId = $this->resolveTenantId($tenantId);
+        $tenantId = $this->resolveTenantIdOrNull($tenantId);
+
+        if ($tenantId === null) {
+            return ConfigurationRegistry::default($key);
+        }
+
         $cacheKey = $this->cacheKey($tenantId, $key);
 
         return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($key, $tenantId) {
@@ -56,6 +78,7 @@ class ConfigurationService
         );
 
         Cache::forget($this->cacheKey($tenantId, $key));
+        $this->forgetDerivedCaches($tenantId, $key);
 
         $this->auditLog->record(
             action: 'config.updated',
@@ -69,6 +92,20 @@ class ConfigurationService
         return $validated;
     }
 
+    public function forgetDerivedCaches(int $tenantId, ConfigurationKey $key): void
+    {
+        if (in_array($key, self::BRANDING_KEYS, true)) {
+            Cache::forget('pwa.manifest:'.($tenantId ?? 'default'));
+            Cache::forget('pwa.favicon:'.($tenantId ?? 'default'));
+            Cache::forget('branding.logo:'.($tenantId ?? 'default'));
+            Cache::forget('branding.pwa_icon:'.($tenantId ?? 'default'));
+        }
+
+        if (in_array($key, self::LAYOUT_KEYS, true)) {
+            $this->adminMenu->invalidateForTenant($tenantId);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -77,10 +114,10 @@ class ConfigurationService
         $tenantId = $this->resolveTenantIdOrNull($tenantId);
 
         if ($tenantId === null) {
-            return $this->defaultsSnapshot();
+            return $this->enrichSnapshot($this->defaultsSnapshot(), null);
         }
 
-        return [
+        $snapshot = [
             'layoutMode' => $this->get(ConfigurationKey::LayoutMode, $tenantId),
             'themeColors' => $this->get(ConfigurationKey::ThemeColors, $tenantId),
             'appName' => $this->get(ConfigurationKey::AppName, $tenantId),
@@ -90,6 +127,8 @@ class ConfigurationService
             'faviconArchivoId' => $this->get(ConfigurationKey::FaviconArchivoId, $tenantId),
             'pwaIconArchivoId' => $this->get(ConfigurationKey::PwaIconArchivoId, $tenantId),
         ];
+
+        return $this->enrichSnapshot($snapshot, $tenantId);
     }
 
     public function resolveTenantId(?int $tenantId = null): int
@@ -112,6 +151,21 @@ class ConfigurationService
 
         return Tenant::query()->where('slug', 'default')->value('id')
             ?? Tenant::query()->value('id');
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private function enrichSnapshot(array $snapshot, ?int $tenantId): array
+    {
+        return array_merge($snapshot, [
+            'logoUrl' => $this->brandingAssets->publicUrl(ConfigurationKey::LogoArchivoId, $this, $tenantId),
+            'faviconUrl' => $this->brandingAssets->publicUrl(ConfigurationKey::FaviconArchivoId, $this, $tenantId)
+                ?? route('pwa.favicon'),
+            'pwaIconUrl' => $this->brandingAssets->publicUrl(ConfigurationKey::PwaIconArchivoId, $this, $tenantId)
+                ?? route('pwa.favicon'),
+        ]);
     }
 
     /**

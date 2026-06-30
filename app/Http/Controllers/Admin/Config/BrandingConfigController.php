@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin\Config;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Config\UpdateBrandingConfigRequest;
 use App\Services\ConfigurationService;
 use App\Services\SecureUploadService;
 use App\Support\Config\ConfigurationKey;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,20 +22,18 @@ class BrandingConfigController extends Controller
             'logoArchivoId' => $configuration->get(ConfigurationKey::LogoArchivoId),
             'faviconArchivoId' => $configuration->get(ConfigurationKey::FaviconArchivoId),
             'pwaIconArchivoId' => $configuration->get(ConfigurationKey::PwaIconArchivoId),
+            'logoUrl' => $configuration->getPublicSnapshot()['logoUrl'] ?? null,
+            'faviconUrl' => $configuration->getPublicSnapshot()['faviconUrl'] ?? null,
+            'pwaIconUrl' => $configuration->getPublicSnapshot()['pwaIconUrl'] ?? null,
         ]);
     }
 
-    public function update(Request $request, ConfigurationService $configuration, SecureUploadService $uploader): RedirectResponse
-    {
-        $validated = $request->validate([
-            'appName' => ['required', 'string', 'max:120'],
-            'pwaThemeColor' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'pwaBackgroundColor' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'logo' => ['nullable', 'file', 'max:5120'],
-            'favicon' => ['nullable', 'file', 'max:5120'],
-            'pwaIcon' => ['nullable', 'file', 'max:5120'],
-        ]);
-
+    public function update(
+        UpdateBrandingConfigRequest $request,
+        ConfigurationService $configuration,
+        SecureUploadService $uploader,
+    ): RedirectResponse {
+        $validated = $request->validated();
         $user = $request->user();
 
         $configuration->set(ConfigurationKey::AppName, $validated['appName'], $user);

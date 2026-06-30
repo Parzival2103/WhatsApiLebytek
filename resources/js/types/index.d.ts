@@ -14,6 +14,9 @@ export interface AppConfig {
     logoArchivoId: number | null;
     faviconArchivoId: number | null;
     pwaIconArchivoId: number | null;
+    logoUrl?: string | null;
+    faviconUrl?: string | null;
+    pwaIconUrl?: string | null;
 }
 
 export interface AdminMenuNode {

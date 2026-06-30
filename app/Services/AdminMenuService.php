@@ -31,6 +31,12 @@ class AdminMenuService
         Cache::forget($this->cacheKey($user));
     }
 
+    public function invalidateForTenant(?int $tenantId): void
+    {
+        $key = 'admin_menu_version:'.($tenantId ?? 'platform');
+        Cache::put($key, (int) Cache::get($key, 0) + 1);
+    }
+
     /**
      * @return Collection<int, MenuItem>
      */
@@ -94,7 +100,8 @@ class AdminMenuService
     {
         $roleKey = $user->getRoleNames()->sort()->implode('|');
         $tenantId = $user->tenant_id ?? 'platform';
+        $version = Cache::get('admin_menu_version:'.$tenantId, 1);
 
-        return "admin_menu:{$tenantId}:{$roleKey}";
+        return "admin_menu:{$tenantId}:{$version}:{$roleKey}";
     }
 }

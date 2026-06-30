@@ -29,12 +29,18 @@ class CoreSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'tenant_id' => $tenant->id,
                 'is_platform_admin' => true,
+                'must_change_password' => false,
                 'email_verified_at' => now(),
             ],
         );
 
         $admin->assignRole(Role::findByName('admin', 'web'));
 
+        $this->seedModulesAndMenu($tenant);
+    }
+
+    public function seedModulesAndMenu(Tenant $tenant): void
+    {
         foreach (config('vertical.modules', []) as $moduleKey => $meta) {
             Module::firstOrCreate(
                 [

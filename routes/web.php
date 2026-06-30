@@ -3,7 +3,9 @@
 use App\Http\Controllers\Admin\Config\BrandingConfigController;
 use App\Http\Controllers\Admin\Config\LayoutConfigController;
 use App\Http\Controllers\Admin\Config\ThemeConfigController;
+use App\Http\Controllers\Admin\ForcePasswordChangeController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\FaviconController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\ProfileController;
@@ -17,6 +19,8 @@ Route::get('/', function () {
 
 Route::get('/manifest.webmanifest', ManifestController::class)->name('pwa.manifest');
 Route::get('/favicon.ico', FaviconController::class)->name('pwa.favicon');
+Route::get('/branding/logo/{hash?}', [BrandingAssetController::class, 'logo'])->name('branding.logo');
+Route::get('/branding/pwa-icon/{hash?}', [BrandingAssetController::class, 'pwaIcon'])->name('branding.pwa_icon');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -29,7 +33,10 @@ Route::prefix('admin')->group(function (): void {
         Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
     });
 
-    Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::middleware(['auth', 'verified', 'password.changed'])->group(function (): void {
+        Route::get('/password/change', [ForcePasswordChangeController::class, 'edit'])->name('admin.password.change');
+        Route::put('/password/change', [ForcePasswordChangeController::class, 'update'])->name('admin.password.change.store');
+
         Route::get('/dashboard', function (DashboardWidgetRegistry $widgets) {
             return Inertia::render('Dashboard', [
                 'dashboardWidgets' => $widgets->forUser(auth()->user()),

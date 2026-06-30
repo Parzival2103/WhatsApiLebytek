@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin\Config;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Config\UpdateLayoutConfigRequest;
 use App\Services\ConfigurationService;
 use App\Support\Config\ConfigurationKey;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,15 +19,11 @@ class LayoutConfigController extends Controller
         ]);
     }
 
-    public function update(Request $request, ConfigurationService $configuration): RedirectResponse
+    public function update(UpdateLayoutConfigRequest $request, ConfigurationService $configuration): RedirectResponse
     {
-        $validated = $request->validate([
-            'layoutMode' => ['required', 'in:top,side'],
-        ]);
-
         $configuration->set(
             ConfigurationKey::LayoutMode,
-            $validated['layoutMode'],
+            $request->validated('layoutMode'),
             $request->user(),
         );
 

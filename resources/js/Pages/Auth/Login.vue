@@ -5,12 +5,21 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-defineProps<{
+const props = defineProps<{
     canResetPassword?: boolean;
     status?: string;
+    isAdminLogin?: boolean;
 }>();
+
+const { t } = useI18n();
+const page = usePage();
+
+const logoUrl = computed(() => page.props.appConfig?.logoUrl as string | null | undefined);
+const appName = computed(() => page.props.appConfig?.appName ?? 'Lebytek');
 
 const form = useForm({
     email: '',
@@ -19,7 +28,9 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('login'), {
+    const routeName = props.isAdminLogin ? 'admin.login.store' : 'login';
+
+    form.post(route(routeName), {
         onFinish: () => {
             form.reset('password');
         },
@@ -28,8 +39,8 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Log in" />
+    <GuestLayout :logo-url="logoUrl" :app-name="appName">
+        <Head :title="t('auth.login_title')" />
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
             {{ status }}
@@ -37,7 +48,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="t('auth.email')" />
 
                 <TextInput
                     id="email"
@@ -53,7 +64,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="t('auth.password')" />
 
                 <TextInput
                     id="password"
@@ -70,9 +81,7 @@ const submit = () => {
             <div class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+                    <span class="ms-2 text-sm text-gray-600">{{ t('auth.remember') }}</span>
                 </label>
             </div>
 
@@ -82,7 +91,7 @@ const submit = () => {
                     :href="route('password.request')"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
-                    Forgot your password?
+                    {{ t('auth.forgot_password') }}
                 </Link>
 
                 <PrimaryButton
@@ -90,7 +99,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Log in
+                    {{ t('auth.submit') }}
                 </PrimaryButton>
             </div>
         </form>

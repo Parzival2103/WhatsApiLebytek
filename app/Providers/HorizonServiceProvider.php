@@ -8,29 +8,38 @@ use Laravel\Horizon\HorizonApplicationServiceProvider;
 
 class HorizonServiceProvider extends HorizonApplicationServiceProvider
 {
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         parent::boot();
 
-        // Horizon::routeSmsNotificationsTo('15556667777');
-        // Horizon::routeMailNotificationsTo('example@example.com');
-        // Horizon::routeSlackNotificationsTo('slack-webhook-url', '#channel');
+        $mail = config('horizon.notifications.mail');
+
+        if (is_string($mail) && $mail !== '') {
+            Horizon::routeMailNotificationsTo($mail);
+        }
+
+        $slackUrl = config('horizon.notifications.slack.webhook');
+        $slackChannel = config('horizon.notifications.slack.channel');
+
+        if (is_string($slackUrl) && $slackUrl !== '' && is_string($slackChannel) && $slackChannel !== '') {
+            Horizon::routeSlackNotificationsTo($slackUrl, $slackChannel);
+        }
     }
 
-    /**
-     * Register the Horizon gate.
-     *
-     * This gate determines who can access Horizon in non-local environments.
-     */
     protected function gate(): void
     {
         Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                //
-            ]);
+            if ($user === null) {
+                return false;
+            }
+
+            $allowed = config('nucleo.horizon_allowed_emails', []);
+
+            if ($allowed === []) {
+                return $user->isPlatformAdmin();
+            }
+
+            return in_array($user->email, $allowed, true);
         });
     }
 }

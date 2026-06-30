@@ -34,6 +34,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = $request->user();
+
+        if ($user?->must_change_password) {
+            return redirect()->route('admin.password.change');
+        }
+
         $default = $request->is('admin/login') || $request->routeIs('admin.login.store')
             ? route('admin.dashboard', absolute: false)
             : route('dashboard', absolute: false);

@@ -307,4 +307,12 @@ return [
         'composer.json',
         '.env',
     ],
+
+    'notifications' => [
+        'mail' => env('HORIZON_MAIL'),
+        'slack' => [
+            'webhook' => env('HORIZON_SLACK_WEBHOOK'),
+            'channel' => env('HORIZON_SLACK_CHANNEL', '#alerts'),
+        ],
+    ],
 ];

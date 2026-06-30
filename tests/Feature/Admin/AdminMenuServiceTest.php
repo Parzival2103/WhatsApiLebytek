@@ -46,6 +46,7 @@ test('menu is cached per role', function () {
 
     $roleKey = $admin->getRoleNames()->sort()->implode('|');
     $tenantId = $admin->tenant_id ?? 'platform';
+    $version = \Illuminate\Support\Facades\Cache::get("admin_menu_version:{$tenantId}", 1);
 
-    expect(\Illuminate\Support\Facades\Cache::has("admin_menu:{$tenantId}:{$roleKey}"))->toBeTrue();
+    expect(\Illuminate\Support\Facades\Cache::has("admin_menu:{$tenantId}:{$version}:{$roleKey}"))->toBeTrue();
 });

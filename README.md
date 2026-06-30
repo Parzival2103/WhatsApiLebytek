@@ -14,7 +14,7 @@ Este repositorio incluye el **núcleo administrativo Laravel** (Inertia + Vue 3 
 | **Usuario CloudPanel** | `lebytek-api` |
 | **PHP-FPM** | 8.4 (puerto site `20001`) |
 | **Colas** | Redis (`127.0.0.1:6379`) |
-| **Supervisor** | `/etc/supervisor/conf.d/lebytek-api-worker.conf` |
+| **Supervisor** | `/etc/supervisor/conf.d/lebytek-api-horizon.conf` (`php artisan horizon`) |
 | **BD CloudPanel** | `lebytekapi` |
 
 ## Desarrollo local (Cursor)
@@ -32,14 +32,26 @@ php artisan serve
 
 ## Deploy en VPS (pull)
 
+Ver runbook completo en [`docs/DEPLOY.md`](docs/DEPLOY.md) (npm build, R2, ProductionSeeder, smoke tests).
+
 ```bash
 cd /home/lebytek-api/htdocs/api.lebytek.com
 sudo -u lebytek-api git pull origin main
 sudo -u lebytek-api composer install --no-dev --optimize-autoloader
+sudo -u lebytek-api npm ci && npm run build
 sudo -u lebytek-api php artisan migrate --force
 sudo -u lebytek-api php artisan config:cache
-supervisorctl restart lebytek-api-worker:*
+sudo -u lebytek-api php artisan scribe:generate
+supervisorctl restart lebytek-api-horizon:*
 ```
+
+## Tokens de tema (CSS)
+
+Contrato en [`resources/css/theme.css`](resources/css/theme.css):
+
+- `--color-primary`, `--color-secondary`, `--color-accent`, `--color-background`, `--color-foreground`
+
+Los valores se inyectan desde `appConfig.themeColors` (configuración admin). Los verticales deben usar estas variables, no colores hardcodeados.
 
 > **`.env` no va en git.** En el VPS vive solo en el servidor; cópialo/ajusta una vez en producción.
 

@@ -31,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.api.permission' => \App\Http\Middleware\EnsureApiPermission::class,
             'webhook.signature' => \App\Http\Middleware\VerifyWebhookSignature::class,
             'webhook.idempotency' => \App\Http\Middleware\WebhookIdempotency::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
+            'api.idempotency' => \App\Http\Middleware\ApiIdempotencyKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

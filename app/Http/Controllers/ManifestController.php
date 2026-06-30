@@ -41,8 +41,10 @@ class ManifestController extends Controller
      */
     private function icons(array $snapshot): array
     {
+        $iconUrl = $snapshot['pwaIconUrl'] ?? route('pwa.favicon');
+
         return [[
-            'src' => url('/favicon.ico'),
+            'src' => $iconUrl,
             'sizes' => '512x512',
             'type' => 'image/png',
         ]];

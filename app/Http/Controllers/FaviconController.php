@@ -2,39 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Core\Archivo;
+use App\Services\BrandingAssetService;
 use App\Services\ConfigurationService;
 use App\Support\Config\ConfigurationKey;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 
 class FaviconController extends Controller
 {
-    private const DEFAULT_PNG = 'iVBORw0KGgoAAAANSUhEhCQAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-
-    public function __invoke(ConfigurationService $configuration): Response
+    public function __invoke(BrandingAssetService $assets, ConfigurationService $configuration): Response
     {
         $tenantId = $configuration->resolveTenantIdOrNull();
         $cacheKey = 'pwa.favicon:'.($tenantId ?? 'default');
 
-        $binary = Cache::remember($cacheKey, 3600, function () use ($configuration, $tenantId) {
-            $archivoId = $configuration->get(ConfigurationKey::FaviconArchivoId, $tenantId);
+        $payload = Cache::remember($cacheKey, 3600, function () use ($assets, $configuration, $tenantId) {
+            $binary = $assets->binaryForKey(ConfigurationKey::FaviconArchivoId, $configuration, $tenantId);
+            $mime = $assets->mimeForKey(ConfigurationKey::FaviconArchivoId, $configuration, $tenantId);
 
-            if ($archivoId) {
-                $archivo = Archivo::withoutGlobalScopes()->find($archivoId);
-
-                if ($archivo && Storage::disk($archivo->disk)->exists($archivo->path)) {
-                    return Storage::disk($archivo->disk)->get($archivo->path);
-                }
-            }
-
-            return base64_decode(self::DEFAULT_PNG);
+            return [
+                'binary' => $binary,
+                'mime' => $mime,
+                'etag' => hash('sha256', $binary),
+            ];
         });
 
-        return response($binary, 200, [
-            'Content-Type' => 'image/png',
+        return response($payload['binary'], 200, [
+            'Content-Type' => $payload['mime'],
             'Cache-Control' => 'public, max-age=86400',
+            'ETag' => '"'.$payload['etag'].'"',
         ]);
     }
 }

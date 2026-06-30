@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens — applied from appConfig.themeColors via AdminLayout / Public pages.
+ * Contract for verticals: use these CSS variables, do not hardcode brand colors.
+ */
+:root {
+    --color-primary: #2563eb;
+    --color-secondary: #64748b;
+    --color-accent: #0ea5e9;
+    --color-background: #ffffff;
+    --color-foreground: #0f172a;
+}

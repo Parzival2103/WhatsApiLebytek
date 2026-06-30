@@ -46,7 +46,7 @@ return [
 
             // Exclude these routes even if they matched the rules above.
             'exclude' => [
-                'POST api/v1/webhooks/*',
+                //
             ],
         ],
     ],

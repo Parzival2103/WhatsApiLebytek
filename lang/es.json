@@ -4,10 +4,25 @@
     },
     "nav": {
         "dashboard": "Panel",
-        "login": "Iniciar sesión"
+        "login": "Iniciar sesión",
+        "access_panel": "Acceder al panel"
     },
     "welcome": {
-        "title": "Bienvenido"
+        "title": "Bienvenido",
+        "tagline": "Plataforma administrativa modular Lebytek."
+    },
+    "auth": {
+        "login_title": "Iniciar sesión",
+        "email": "Correo electrónico",
+        "password": "Contraseña",
+        "remember": "Recordarme",
+        "forgot_password": "¿Olvidaste tu contraseña?",
+        "submit": "Entrar",
+        "force_change_title": "Cambiar contraseña",
+        "force_change_help": "Debes establecer una nueva contraseña antes de continuar.",
+        "new_password": "Nueva contraseña",
+        "confirm_password": "Confirmar contraseña",
+        "password_changed": "Contraseña actualizada correctamente."
     },
     "config": {
         "layout_title": "Disposición del menú",
@@ -20,6 +35,11 @@
         "layout_mode": "Modo de layout",
         "mode_side": "Menú lateral",
         "mode_top": "Menú superior",
+        "pwa_theme_color": "Color de tema PWA",
+        "pwa_background_color": "Color de fondo PWA",
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "pwa_icon": "Ícono PWA",
         "save": "Guardar cambios",
         "saved": "Configuración guardada."
     }
