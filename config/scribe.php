@@ -1,7 +1,8 @@
 <?php
 
-// Scribe is a dev dependency — skip full config in production or when package is absent.
-if (env('APP_ENV') === 'production' || ! class_exists(\Knuckles\Scribe\Config\Defaults::class, false)) {
+$scribeInstalled = is_file(__DIR__.'/../vendor/knuckleswtf/scribe/src/Config/Defaults.php');
+
+if (! $scribeInstalled) {
     return [
         'type' => 'laravel',
         'laravel' => [
