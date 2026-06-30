@@ -24,7 +24,7 @@ Cuenta de servicio única que provisiona y administra. Lo usa el back-office de 
 |----------|-------|
 | Header | `Authorization: Bearer {LEBYTEK_API_TOKEN}` |
 | Emisión del token | En el VPS api: `php artisan integration:issue-waapi-token` |
-| Usuario api | `PLATFORM_SERVICE_EMAIL` (platform admin, `tenant_id = null`) |
+| Usuario api | `WAAPI_SERVICE_EMAIL` (platform admin, `tenant_id = null`) |
 | Permisos | `api.health`, `tenants.ver`, `tenants.provisionar`, `tenants.gestionar`, `instancias.ver`, `instancias.crear`, `instancias.eliminar` |
 
 El token se guarda en el back-office como `LEBYTEK_API_TOKEN` (secreto, nunca en repositorio).
@@ -151,7 +151,7 @@ Cuerpo típico 422:
 {
   "name": "Acme Corp",
   "slug": "acme-corp",
-  "externalRef": "waapi_org_42"
+  "externalRef": "lebytek_lead_42"
 }
 ```
 
@@ -170,14 +170,14 @@ Cuerpo típico 422:
   "publicId": "01JXYZABCDEF",
   "name": "Acme Corp",
   "slug": "acme-corp",
-  "externalRef": "waapi_org_42",
+  "externalRef": "lebytek_lead_42",
   "isActive": true,
   "createdAt": "2026-06-29T12:00:00+00:00",
   "updatedAt": "2026-06-29T12:00:00+00:00"
 }
 ```
 
-waapi debe persistir `publicId` en su tabla `organizations.api_tenant_public_id`.
+El back-office persiste `publicId` en `dom_mkt_leads.api_tenant_public_id`.
 
 ---
 
@@ -206,6 +206,8 @@ waapi debe persistir `publicId` en su tabla `organizations.api_tenant_public_id`
 ---
 
 ### `POST /tenants/{publicId}/tokens`
+
+> **Estado implementación (api):** contrato acordado; **pendiente en código** — no existe en `routes/api.php` al 2026-06-30. Requerido antes del flujo 2º correo.
 
 **Permiso:** `tenants.gestionar`  
 **Acceso:** solo cuenta de plataforma (back-office)  
@@ -300,27 +302,46 @@ sequenceDiagram
 
 ---
 
+## Entrega al cliente (2º correo)
+
+Tras aprobar lead y provisioning en api, el back-office de **lebytek.com** envía un segundo correo al cliente.
+
+| Elemento | v1 operativa | Notas |
+|----------|--------------|-------|
+| Token Sanctum por-tenant | **Obligatorio** | Emitido vía `POST /tenants/{publicId}/tokens` (pendiente implementación api) |
+| URL / login waapi | Opcional | Fase posterior; panel congelado |
+| Instrucciones API (`api.lebytek.com`) | Recomendado | Base URL + uso del token |
+| Token Green API crudo | **Prohibido** | Nunca en correo ni respuestas api |
+
+Pago manual (transferencia) lo gestiona lebytek.com antes del 2º correo.
+
+---
+
 ## Bootstrap en producción (api)
 
 ```bash
 # Tras migrate/seed
 php artisan integration:issue-waapi-token --revoke
-# Copiar token → waapi .env LEBYTEK_API_TOKEN
+# Copiar token → lebytek.com .env LEBYTEK_API_TOKEN
 ```
 
-Variables api relevantes:
+Variables api (código actual — ver `config/nucleo.php`):
 
 ```env
-PLATFORM_SERVICE_EMAIL=platform-service@lebytek.internal
-PLATFORM_SERVICE_NAME="Lebytek Platform Service"
+WAAPI_SERVICE_EMAIL=waapi-service@lebytek.internal
+WAAPI_SERVICE_NAME="Lebytek Platform Service"
 ```
 
-Variables del back-office (lebytek.com):
+> Alias futuro documentado: `PLATFORM_SERVICE_*` (renombrado P2, no bloqueante).
+
+Variables back-office **lebytek.com** (primario):
 
 ```env
 LEBYTEK_API_URL=https://api.lebytek.com/api/v1
 LEBYTEK_API_TOKEN=<token del comando artisan>
 ```
+
+> waapi.lebytek.com mantiene copia legacy del token para fase panel; no es orquestador.
 
 ---
 
@@ -333,4 +354,4 @@ LEBYTEK_API_TOKEN=<token del comando artisan>
 | Controller | `app/Http/Controllers/Api/V1/TenantController.php` |
 | Acting tenant | `app/Http/Middleware/ResolveActingTenant.php` |
 | Token waapi | `php artisan integration:issue-waapi-token` |
-| Delegación roles | `docs/integration/role-delegation-waapi.md` |
+| Delegación roles | `docs/integration/role-delegation-lebytek-api.md` |
