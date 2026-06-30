@@ -35,9 +35,5 @@ class WaapiServiceSeeder extends Seeder
                 ->whereIn('name', $platformPermissions)
                 ->get()
         );
-
-        $serviceUser->syncRoles([
-            Role::findByName('platform-service', 'sanctum'),
-        ]);
     }
 }
