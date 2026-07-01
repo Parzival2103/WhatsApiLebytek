@@ -4,6 +4,22 @@ Ejecutar **después** de configurar acceso SSH (ver `tools/setup_vps_ssh.py` →
 
 ---
 
+## E2E Fase 0 — verificación (2026-07-01)
+
+Criterios de aceptación del spec `2026-07-01-integration-e2e-phase0-1-design.md` §4.5:
+
+- [x] `GREEN_API_PARTNER_TOKEN` configurado y no vacío en api VPS (2026-07-01)
+- [x] `LEBYTEK_API_TOKEN` + `MAIL_*` smtp configurados en lebytek VPS (2026-07-01)
+- [x] Deploy lebytek ≥ `c2d51cd` — `health_rc=0` en `vps-deploy-lebytek-com.sh` (2026-07-01)
+- [x] `php scripts/lebytek-api-health.php` → exit 0 (2026-07-01)
+- [x] Smoke E2E provisioning verde — botón **Provisionar demo (api)** en CRUD leads (2026-07-01)
+- [ ] Cron health cada 5 min — script listo en repo; **pendiente confirmar crontab operador en VPS**
+- [x] `VPS_CHECKLIST.md` actualizado con resultados (2026-07-01)
+
+Flujo E2E manual: crear lead `validada` → clic **Provisionar demo (api)** → verificar `api_tenant_public_id`, `estado=demo_enviada`, correo con token + base URL (sin token Green).
+
+---
+
 ## api.lebytek.com
 
 Ruta: `/home/lebytek-api/htdocs/api.lebytek.com`  
@@ -20,6 +36,7 @@ Usuario CloudPanel: `lebytek-api`
 ### Entorno
 
 - [ ] `.env` existe (no en git): `APP_URL=https://api.lebytek.com`
+- [x] `GREEN_API_PARTNER_TOKEN` configurado (2026-07-01)
 - [ ] Redis: `REDIS_HOST=127.0.0.1`, `QUEUE_CONNECTION=redis`
 - [ ] BD CloudPanel: `lebytekapi`
 - [ ] R2/uploads: `UPLOADS_DISK=s3`, credenciales AWS/R2
@@ -77,6 +94,8 @@ Branch: `feature/backoffice-api-integration` (until merge)
 - [ ] `composer install --no-dev`
 - [ ] Document root → `public/`
 - [ ] `.env`: DB, MAIL_*, LEBYTEK_API_URL, LEBYTEK_API_TOKEN
+- [x] `LEBYTEK_API_TOKEN` + `MAIL_*` smtp configurados (2026-07-01)
+- [x] Deploy ≥ `c2d51cd` — `DEPLOY_DONE health_rc=0` (2026-07-01)
 
 ### BD
 
@@ -88,6 +107,15 @@ Branch: `feature/backoffice-api-integration` (until merge)
 - [ ] Landing `/` loads
 - [ ] `/admin/login` loads
 - [ ] `GET /api/v1/health` from server using LEBYTEK_API_TOKEN → 200
+
+### E2E provisioning (back-office)
+
+1. Admin → CRUD Leads → lead de prueba en estado `validada`
+2. Clic **Provisionar demo (api)** en la fila
+3. Verificar: `api_tenant_public_id` NOT NULL, `estado=demo_enviada`, correo recibido
+
+- [x] Smoke E2E provisioning verde (2026-07-01)
+- [ ] Cron health cada 5 min — **pendiente confirmar crontab** (`scripts/lebytek-api-health.php` listo)
 
 ### DNS
 

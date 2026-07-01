@@ -207,7 +207,7 @@ El back-office persiste `publicId` en `dom_mkt_leads.api_tenant_public_id`.
 
 ### `POST /tenants/{publicId}/tokens`
 
-> **Estado implementación (api):** contrato acordado; **pendiente en código** — no existe en `routes/api.php` al 2026-06-30. Requerido antes del flujo 2º correo.
+> **Estado implementación (api):** **Implementado** — `routes/api.php` (`api.v1.tenants.tokens.store`), commit `c9b1bc2+`.
 
 **Permiso:** `tenants.gestionar`  
 **Acceso:** solo cuenta de plataforma (back-office)  
@@ -245,6 +245,30 @@ Emite un **token Sanctum por-tenant** para que el cliente final llame a api dire
 
 ---
 
+### `POST /instances`
+
+**Estado:** **Implementado**  
+**Permiso:** `instancias.crear`  
+**Acceso:** solo cuenta de plataforma  
+**Header:** `X-Tenant-Id: {tenantPublicId}`  
+**Idempotency-Key:** requerido  
+
+**Body:**
+
+```json
+{
+  "label": "Demo Acme",
+  "externalRef": "lebytek_lead_42_instance",
+  "purpose": "demo"
+}
+```
+
+**Respuesta:** `202` provisioning (async Green Partner job) or `200`/`201` when idempotent/existing.
+
+Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances/{publicId}/qr`, `DELETE /instances/{publicId}`.
+
+---
+
 ## Webhooks entrantes (Green API → api)
 
 **No consumidos por waapi.** Green API envía eventos solo a api.
@@ -263,10 +287,6 @@ Marcados para el vertical WhatsApp. waapi **no debe** implementar llamadas a est
 
 | Method | Path | Permiso (previsto) | Propósito |
 |--------|------|-------------------|-----------|
-| GET | `/instances` | `instancias.ver` | Listar instancias Green por tenant |
-| POST | `/instances` | `instancias.crear` | Vincular instancia |
-| GET | `/instances/{publicId}` | `instancias.ver` | Estado / QR |
-| DELETE | `/instances/{publicId}` | `instancias.eliminar` | Desvincular |
 | PUT | `/credentials/green-api` | `credenciales.gestionar` | Credenciales cifradas por tenant |
 | GET | `/campaigns` | `campanias.ver` | Listar campañas |
 | POST | `/campaigns` | `campanias.crear` | Crear campaña |
@@ -308,7 +328,7 @@ Tras aprobar lead y provisioning en api, el back-office de **lebytek.com** enví
 
 | Elemento | v1 operativa | Notas |
 |----------|--------------|-------|
-| Token Sanctum por-tenant | **Obligatorio** | Emitido vía `POST /tenants/{publicId}/tokens` (pendiente implementación api) |
+| Token Sanctum por-tenant | **Obligatorio** | Emitido vía `POST /tenants/{publicId}/tokens` (**implementado**) |
 | URL / login waapi | Opcional | Fase posterior; panel congelado |
 | Instrucciones API (`api.lebytek.com`) | Recomendado | Base URL + uso del token |
 | Token Green API crudo | **Prohibido** | Nunca en correo ni respuestas api |
@@ -350,8 +370,10 @@ LEBYTEK_API_TOKEN=<token del comando artisan>
 | Componente | Ruta |
 |------------|------|
 | Rutas | `routes/api.php` |
-| Provisioning | `app/Services/TenantProvisioningService.php` |
-| Controller | `app/Http/Controllers/Api/V1/TenantController.php` |
+| Provisioning tenant | `app/Services/TenantProvisioningService.php` |
+| Provisioning instancia | `app/Services/GreenApi/InstanceProvisioningService.php` |
+| Controller tenants | `app/Http/Controllers/Api/V1/TenantController.php` |
+| Controller instancias | `app/Http/Controllers/Api/V1/InstanceController.php` |
 | Acting tenant | `app/Http/Middleware/ResolveActingTenant.php` |
-| Token waapi | `php artisan integration:issue-waapi-token` |
+| Token plataforma CLI | `php artisan integration:issue-waapi-token` |
 | Delegación roles | `docs/integration/role-delegation-lebytek-api.md` |

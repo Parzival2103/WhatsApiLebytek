@@ -272,14 +272,28 @@ final class LeadApiProvisioningService
 
 ---
 
+## Operaciones — flujo demo (manual)
+
+1. Lead entra → `pendiente`
+2. Admin revisa → cambia a `validada` (cobro manual fuera del sistema o en notas)
+3. Admin clic **Provisionar demo (api)** en la fila
+4. Sistema orquesta tenant + instancia + token + 2º correo
+5. Lead → `demo_enviada` automáticamente
+6. Si falla → `api_provision_error` visible en listado; corregir env y reintentar
+
+**Regla:** no re-provisionar si `api_tenant_public_id` ya existe (idempotente).  
+**Único camino demo en prod:** api.lebytek.com (`GREEN_API_ENABLED=false`).
+
+---
+
 ## 6. Segundo correo (v1)
 
-Tras aprobar lead, provisioning exitoso y (cuando exista en api) emisión de token por-tenant:
+Tras aprobar lead, provisioning exitoso y emisión de token por-tenant:
 
 | Campo plantilla | v1 |
 |-----------------|-----|
 | Nombre cliente | Sí |
-| Token Sanctum por-tenant | **Obligatorio** (vía `POST /tenants/{publicId}/tokens` — pendiente api) |
+| Token Sanctum por-tenant | **Obligatorio** (vía `POST /tenants/{publicId}/tokens` — **implementado**) |
 | Base URL api (`https://api.lebytek.com/api/v1`) | Recomendado |
 | Enlace / login waapi | **Omitir** en v1 |
 | Token Green API | **Prohibido** |
@@ -341,16 +355,16 @@ En back-office: aprobar lead de prueba → verificar fila con `api_tenant_public
 
 ## 10. Checklist
 
-- [ ] `.env` con `LEBYTEK_API_URL` + `LEBYTEK_API_TOKEN`
-- [ ] Migración columnas api en `dom_mkt_leads`
-- [ ] `LebytekApiClient` con Idempotency-Key y retry 429/5xx
-- [ ] `LebytekApiException` con `statusCode` y `errors`
-- [ ] `LeadApiProvisioningService` hook al aprobar lead
-- [ ] Script `scripts/lebytek-api-health.php` + cron
-- [ ] Plantilla 2º correo (token + base URL; sin waapi)
-- [ ] `GREEN_API_ENABLED=false` cuando api wired
-- [ ] Logs sin token en claro
-- [ ] Grep/CI sin referencias `green-api.com` en `app/`
+- [x] `.env` con `LEBYTEK_API_URL` + `LEBYTEK_API_TOKEN` (2026-07-01)
+- [x] Migración columnas api en `dom_mkt_leads` (2026-07-01)
+- [x] `LebytekApiClient` con Idempotency-Key y retry 429/5xx (2026-07-01)
+- [x] `LebytekApiException` con `statusCode` y `errors` (2026-07-01)
+- [x] `LeadApiProvisioningService` hook al aprobar lead (2026-07-01 — botón CRUD manual)
+- [x] Script `scripts/lebytek-api-health.php` + cron (2026-07-01 — script en repo; cron VPS pendiente de confirmar operador)
+- [x] Plantilla 2º correo (token + base URL; sin waapi) (2026-07-01)
+- [x] `GREEN_API_ENABLED=false` cuando api wired (2026-07-01)
+- [x] Logs sin token en claro (2026-07-01)
+- [x] Grep/CI sin referencias `green-api.com` en `app/` (2026-07-01)
 
 ---
 

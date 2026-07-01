@@ -25,7 +25,7 @@ FTP México = legacy pre-1.0     auto-pull main               token en .env (lec
         │                              ▲
         │  Bearer plataforma           │
         └──────── POST /tenants ───────┘
-                    POST /instances (Fase 2)
+                    POST /instances
                     POST /tenants/{id}/tokens
 
 docs.lebytek.com — sin tocar (placeholder)
@@ -40,7 +40,7 @@ Green API ──webhooks──► api únicamente
 |------|-------------------------|---------------|
 | Landing / captación leads | Sí (`dom_mkt_leads`, marketing) | No |
 | Aprobar lead + cobro manual | Sí (admin CRUD) | No |
-| `POST /tenants`, Fase 2 instances/tokens | Orquesta | Ejecuta |
+| `POST /tenants`, instances/tokens | Orquesta | Ejecuta |
 | Mapeo lead ↔ tenant | columnas en `dom_mkt_leads` | `core_tenants.external_ref` |
 | Green API | **Nunca** | Sí |
 | Webhooks Green | **Nunca** | Sí |
@@ -111,7 +111,7 @@ Token plataforma: emitido en api con `php artisan integration:issue-waapi-token 
 2. **Revisión admin:** operador en lebytek.com aprueba lead y registra cobro manual (transferencia).
 3. **Provisioning Fase 1:** back-office llama `POST /tenants` con `externalRef=lebytek_lead_{id}`, header `Idempotency-Key` (UUID) y Bearer plataforma.
 4. **Persistencia local:** guardar `publicId` en `api_tenant_public_id`, `api_provisioned_at`, limpiar `api_provision_error`.
-5. **Fase 2 (pendiente api):** `POST /instances`, `POST /tenants/{publicId}/tokens` — ver contrato.
+5. **Instancias + token por-tenant:** back-office llama `POST /instances` (con `X-Tenant-Id`) y `POST /tenants/{publicId}/tokens` — **implementado** en api (commit `c9b1bc2+`).
 6. **2º correo:** back-office envía credenciales al cliente (token Sanctum por-tenant obligatorio en v1; enlace waapi opcional / fase posterior).
 
 ```mermaid
@@ -126,7 +126,7 @@ sequenceDiagram
     BO->>BO: Admin aprueba + cobro manual
     BO->>A: POST /tenants externalRef=lebytek_lead_ID
     A-->>BO: 201 publicId
-    Note over BO,A: Fase 2: POST /instances, POST /tokens
+    Note over BO,A: POST /instances + POST /tokens (implementado)
     BO->>Mail: 2º correo token por-tenant
     Mail->>C: Credenciales Lebytek API
     Note over C: waapi panel — fase posterior
@@ -170,16 +170,16 @@ curl -sS -X POST "$LEBYTEK_API_URL/tenants" \
 
 ## Checklist implementación back-office
 
-- [ ] Migración `dom_mkt_leads` con columnas api aplicada
-- [ ] `.env` con `LEBYTEK_API_URL` y `LEBYTEK_API_TOKEN` (fuera de git)
-- [ ] `LebytekApiClient` (curl) con Idempotency-Key en escrituras
-- [ ] `LeadApiProvisioningService` al aprobar lead (no post-registro org)
-- [ ] `externalRef` = `lebytek_lead_{id}` en todo provisioning
-- [ ] Persistir `api_tenant_public_id`, `api_provisioned_at`, `api_provision_error`
-- [ ] Health check periódico contra api
-- [ ] Plantilla 2º correo (token por-tenant; waapi link omitido en v1)
-- [ ] Desactivar camino legacy Green (`GREEN_API_ENABLED=false` cuando api wired)
-- [ ] Sin referencias a green-api.com en `app/`
+- [x] Migración `dom_mkt_leads` con columnas api aplicada (2026-07-01)
+- [x] `.env` con `LEBYTEK_API_URL` y `LEBYTEK_API_TOKEN` (fuera de git) (2026-07-01)
+- [x] `LebytekApiClient` (curl) con Idempotency-Key en escrituras (2026-07-01)
+- [x] `LeadApiProvisioningService` al aprobar lead (2026-07-01 — botón CRUD manual)
+- [x] `externalRef` = `lebytek_lead_{id}` en todo provisioning (2026-07-01)
+- [x] Persistir `api_tenant_public_id`, `api_provisioned_at`, `api_provision_error` (2026-07-01)
+- [x] Health check periódico contra api (2026-07-01 — script; cron VPS pendiente confirmar)
+- [x] Plantilla 2º correo (token por-tenant; waapi link omitido en v1) (2026-07-01)
+- [x] Desactivar camino legacy Green (`GREEN_API_ENABLED=false` cuando api wired) (2026-07-01)
+- [x] Sin referencias a green-api.com en `app/` (2026-07-01)
 
 ---
 
