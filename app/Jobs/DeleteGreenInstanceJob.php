@@ -27,7 +27,14 @@ class DeleteGreenInstanceJob implements ShouldQueue
     {
         $instancia = Instancia::query()->withoutGlobalScope('tenant')->withTrashed()->find($this->instanciaId);
 
-        if ($instancia === null || $instancia->id_instance === null) {
+        if ($instancia === null) {
+            return;
+        }
+
+        if ($instancia->id_instance === null) {
+            $instancia->update(['status' => 'deleted']);
+            $instancia->delete();
+
             return;
         }
 
@@ -38,6 +45,13 @@ class DeleteGreenInstanceJob implements ShouldQueue
                 'instancia_id' => $instancia->id,
                 'error' => $e->getMessage(),
             ]);
+
+            $instancia->update([
+                'status' => 'failed',
+                'last_error' => 'Green delete failed: '.$e->getMessage(),
+            ]);
+
+            throw $e;
         }
 
         $instancia->update(['status' => 'deleted']);
