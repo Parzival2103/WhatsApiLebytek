@@ -29,6 +29,13 @@ Flujo E2E manual: crear lead `validada` → clic **Provisionar demo (api)** → 
 | 1 | Lead `validada` → Provisionar demo → `demo_enviada` + correo | [x] 2026-07-01 |
 | 2 | Cliente autoriza WhatsApp (QR vía api) | [ ] |
 | 3 | `POST /messages` con token del correo → WhatsApp recibido en móvil | [ ] |
+
+Script smoke (Framework, tras deploy api):
+
+```bash
+php scripts/smoke-send-test-message.php "$TENANT_TOKEN" "$INSTANCE_PUBLIC_ID" "521XXXXXXXXXX" "Test Lebytek API"
+```
+
 | 4 | Dar de baja demo → instancias eliminadas, `demo_baja` | [ ] |
 | 5 | `docs.lebytek.com` muestra `/messages` implementado | [ ] |
 

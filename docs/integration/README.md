@@ -18,7 +18,7 @@ Spec: [../superpowers/specs/2026-06-30-integration-docs-alignment-design.md](../
 |------|--------|--------|
 | 0/1 | E2E + back-office | ✅ |
 | 2b | Lifecycle demo (baja/expiración) | ✅ |
-| 2a | Vertical api `/messages` | ⏳ remediación |
+| 2a | Vertical api `/messages` | ✅ código (smoke VPS pendiente) |
 | 3 | Go-live DNS/docs/main | ⏳ tras 2a |
 | 4/5 | waapi + madurez | 📋 spec listo |
 
