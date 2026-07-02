@@ -20,6 +20,38 @@ Flujo E2E manual: crear lead `validada` → clic **Provisionar demo (api)** → 
 
 ---
 
+## Remediación — Fase 2a smoke mensaje (bloqueado hasta R1)
+
+**No marcar `[x]` hasta smoke manual documentado con fecha.**
+
+| Paso | Check | Estado |
+|------|-------|--------|
+| 1 | Lead `validada` → Provisionar demo → `demo_enviada` + correo | [x] 2026-07-01 |
+| 2 | Cliente autoriza WhatsApp (QR vía api) | [ ] |
+| 3 | `POST /messages` con token del correo → WhatsApp recibido en móvil | [ ] |
+| 4 | Dar de baja demo → instancias eliminadas, `demo_baja` | [ ] |
+| 5 | `docs.lebytek.com` muestra `/messages` implementado | [ ] |
+
+## Remediación — Crons (R2)
+
+Capturar salida en este checklist al confirmar:
+
+```bash
+crontab -l -u lebytek
+```
+
+- [ ] Cron health cada 5 min: `php /home/lebytek/htdocs/lebytek.com/scripts/lebytek-api-health.php`
+- [ ] Cron expire demos diario 03:00: `php /home/lebytek/htdocs/lebytek.com/scripts/expire-api-demos.php`
+
+## Remediación — Go-live Fase 3 (bloqueado hasta R1 smoke verde)
+
+- [ ] **Do not** DNS cutover until paso 3 smoke mensaje verde
+- [ ] Framework `feature/backoffice-api-integration` merged → `main` + tag semver
+- [ ] `node scripts/sync-docs.mjs` + deploy `docs.lebytek.com`
+- [ ] Rollback runbook probado (ver § Rollback rápido)
+
+---
+
 ## api.lebytek.com
 
 Ruta: `/home/lebytek-api/htdocs/api.lebytek.com`  

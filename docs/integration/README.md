@@ -11,3 +11,17 @@
 | [waapi-implementation-real.md](waapi-implementation-real.md) | ⚠️ Stub → usar lebytek-implementation-real |
 
 Spec: [../superpowers/specs/2026-06-30-integration-docs-alignment-design.md](../superpowers/specs/2026-06-30-integration-docs-alignment-design.md)
+
+## Roadmap real (integración)
+
+| Fase | Nombre | Estado |
+|------|--------|--------|
+| 0/1 | E2E + back-office | ✅ |
+| 2b | Lifecycle demo (baja/expiración) | ✅ |
+| 2a | Vertical api `/messages` | ⏳ remediación |
+| 3 | Go-live DNS/docs/main | ⏳ tras 2a |
+| 4/5 | waapi + madurez | 📋 spec listo |
+
+Spec remediación: [../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md](../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md)
+
+> **No avanzar a Fase 4/5** hasta cumplir criterios §6 del spec de remediación.
