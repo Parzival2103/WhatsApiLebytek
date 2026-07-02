@@ -70,6 +70,32 @@ class InstanceClient
         }
     }
 
+    public function sendMessage(string $recipient, string $body): string
+    {
+        $chatId = str_contains($recipient, '@') ? $recipient : $recipient.'@c.us';
+        $url = $this->instanceUrl('sendMessage');
+        $response = Http::timeout(30)->post($url, [
+            'chatId' => $chatId,
+            'message' => $body,
+        ]);
+
+        if (! $response->successful()) {
+            throw new GreenApiException(
+                'sendMessage failed: '.$response->body(),
+                $response->status(),
+                $response->json(),
+            );
+        }
+
+        $idMessage = (string) ($response->json('idMessage') ?? '');
+
+        if ($idMessage === '') {
+            throw new GreenApiException('sendMessage missing idMessage', $response->status(), $response->json());
+        }
+
+        return $idMessage;
+    }
+
     private function instanceUrl(string $method): string
     {
         return rtrim($this->baseUrl, '/')."/waInstance{$this->idInstance}/{$method}/{$this->apiTokenInstance}";

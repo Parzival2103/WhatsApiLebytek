@@ -19,6 +19,8 @@ return [
         'instancias.ver',
         'instancias.crear',
         'instancias.eliminar',
+        'mensajes.enviar',
+        'mensajes.ver',
     ],
 
     /*
@@ -34,5 +36,7 @@ return [
         'instancias.ver',
         'instancias.crear',
         'instancias.eliminar',
+        'mensajes.enviar',
+        'mensajes.ver',
     ],
 ];

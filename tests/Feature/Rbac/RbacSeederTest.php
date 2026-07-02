@@ -36,3 +36,10 @@ test('seeder creates core modules from vertical config', function () {
     expect(\App\Models\Core\Module::withoutGlobalScopes()->count())
         ->toBe(count(config('vertical.modules')));
 });
+
+test('seeder creates mensajes permissions for sanctum guard', function () {
+    expect(\Spatie\Permission\Models\Permission::where('guard_name', 'sanctum')->whereIn('name', [
+        'mensajes.enviar',
+        'mensajes.ver',
+    ])->count())->toBe(2);
+});

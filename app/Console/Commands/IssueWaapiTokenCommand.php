@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\WaapiServiceSeeder;
 use Illuminate\Console\Command;
 use Laravel\Sanctum\PersonalAccessToken;
+use Spatie\Permission\PermissionRegistrar;
 
 class IssueWaapiTokenCommand extends Command
 {
@@ -30,6 +31,12 @@ class IssueWaapiTokenCommand extends Command
 
             $this->info('Existing waapi service tokens revoked.');
         }
+
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $platformPermissions = config('permissions.platform_service', []);
+        $this->line('Platform permissions: '.implode(', ', $platformPermissions));
+        $this->line('Assigned: '.$serviceUser->getAllPermissions()->pluck('name')->sort()->implode(', '));
 
         $token = $serviceUser->createToken($this->option('name'));
 

@@ -25,7 +25,7 @@ Cuenta de servicio única que provisiona y administra. Lo usa el back-office de 
 | Header | `Authorization: Bearer {LEBYTEK_API_TOKEN}` |
 | Emisión del token | En el VPS api: `php artisan integration:issue-waapi-token` |
 | Usuario api | `WAAPI_SERVICE_EMAIL` (platform admin, `tenant_id = null`) |
-| Permisos | `api.health`, `tenants.ver`, `tenants.provisionar`, `tenants.gestionar`, `instancias.ver`, `instancias.crear`, `instancias.eliminar` |
+| Permisos | `api.health`, `tenants.ver`, `tenants.provisionar`, `tenants.gestionar`, `instancias.ver`, `instancias.crear`, `instancias.eliminar`, `mensajes.enviar`, `mensajes.ver` |
 
 El token se guarda en el back-office como `LEBYTEK_API_TOKEN` (secreto, nunca en repositorio).
 
@@ -38,7 +38,7 @@ api emite un token Sanctum propio del tenant durante el provisioning (ver `POST 
 | Header | `Authorization: Bearer {token por-tenant}` |
 | Emisión | `POST /tenants/{publicId}/tokens` (solo token de plataforma) — devuelto **una sola vez** en claro |
 | Confinamiento | confinado a su propio `tenant_id`; **ignora** `X-Tenant-Id` |
-| Permisos | `instancias.ver` (lectura de su instancia/estado/QR); en Fase 2 de envío: `mensajes.enviar`, etc. |
+| Permisos | `instancias.ver`, `mensajes.enviar`, `mensajes.ver` (**implementado**) |
 
 El back-office entrega este token al cliente en el "2º correo" (junto al enlace/login a waapi). Pago manual (correo/transferencia) lo gestiona `lebytek.com`.
 
@@ -269,6 +269,39 @@ Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances
 
 ---
 
+## Endpoints — Fase 2a (implementados — mensajes transaccionales)
+
+### `POST /messages`
+
+**Estado:** **Implementado**  
+**Permiso:** `mensajes.enviar`  
+**Header:** token por-tenant (confinado) o platform + `X-Tenant-Id`  
+**Idempotency-Key:** requerido  
+
+**Body:**
+
+```json
+{
+  "recipient": "5215512345678",
+  "body": "Hola desde Lebytek API",
+  "instancePublicId": "01JINST..."
+}
+```
+
+**Flujo:** valida instancia `authorized` → crea `int_mensajes` (`queued`) → dispatch `TransactionalMessageJob` → `202` con `MessageResource`.
+
+**Idempotencia:** mismo `Idempotency-Key` + tenant → respuesta cacheada con el mensaje existente (status `202` vía middleware HTTP).
+
+### `GET /messages/{publicId}`
+
+**Estado:** **Implementado**  
+**Permiso:** `mensajes.ver`  
+**Idempotency-Key:** no requerido  
+
+Respuesta: `publicId`, `status` (`queued`/`sent`/`failed`), `recipient`, `body`, `error`, timestamps. **Sin** token Green.
+
+---
+
 ## Webhooks entrantes (Green API → api)
 
 **No consumidos por waapi.** Green API envía eventos solo a api.
@@ -291,8 +324,6 @@ Marcados para el vertical WhatsApp. waapi **no debe** implementar llamadas a est
 | GET | `/campaigns` | `campanias.ver` | Listar campañas |
 | POST | `/campaigns` | `campanias.crear` | Crear campaña |
 | POST | `/campaigns/{publicId}/dispatch` | `campanias.enviar` | Despachar cola |
-| POST | `/messages` | `mensajes.enviar` | Envío transaccional |
-| GET | `/messages/{publicId}` | `mensajes.ver` | Estado de mensaje |
 
 Todas las rutas fase 2 requerirán `X-Tenant-Id` con token de plataforma salvo que el tenant vaya en el path.
 

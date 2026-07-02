@@ -2,6 +2,9 @@
 
 use App\Jobs\CampaignBatchJob;
 use App\Jobs\TransactionalMessageJob;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('horizon defines isolated supervisors for default transactional and campaigns queues', function () {
     $defaults = config('horizon.defaults');
@@ -13,7 +16,7 @@ test('horizon defines isolated supervisors for default transactional and campaig
 });
 
 test('stub jobs dispatch to the correct queues', function () {
-    $transactional = new TransactionalMessageJob('tenant-ulid', '521234567890', hash('sha256', 'payload'));
+    $transactional = new TransactionalMessageJob(1);
     $campaign = new CampaignBatchJob('campaign-ulid', ['recipient-a', 'recipient-b']);
 
     expect($transactional->queue)->toBe('transactional')
@@ -21,7 +24,8 @@ test('stub jobs dispatch to the correct queues', function () {
 });
 
 test('transactional job registers redis rate limit middleware', function () {
-    $job = new TransactionalMessageJob('tenant-ulid', '521234567890', hash('sha256', 'payload'));
+    $mensaje = \App\Models\Integration\Mensaje::factory()->create();
+    $job = new TransactionalMessageJob($mensaje->id);
 
     expect($job->middleware())->toHaveCount(1);
 });
