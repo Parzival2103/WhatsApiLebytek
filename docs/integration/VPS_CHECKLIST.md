@@ -57,6 +57,22 @@ crontab -l -u lebytek
 - [ ] `node scripts/sync-docs.mjs` + deploy `docs.lebytek.com`
 - [ ] Rollback runbook probado (ver § Rollback rápido)
 
+## Phase 4/5 baseline (2026-07-02)
+
+Auditoría local pre-implementación panel waapi (spec `2026-07-02-integration-phase4-5-design.md` §0):
+
+| Ítem | Estado | Evidencia |
+|------|--------|-----------|
+| `/messages` en api | ✅ código | `routes/api.php` + tests Pest verdes local |
+| Token demo `mensajes.*` | ✅ | `LeadApiProvisioningService` Framework |
+| waapi deploy mode | **Enfoque B** | Mismo tree Framework; `WAAPI_PORTAL_ENABLED=true` en vhost waapi |
+| `/messages` smoke VPS móvil | ⏳ | Remediación §2a paso 3 pendiente |
+| Cron health VPS | ⏳ | Sin confirmar crontab operador |
+| Panel waapi código | ✅ | `routes/waapi_portal.php` + `WaapiPortalController` |
+| waapi VPS live | ⏳ | Deploy pendiente operador |
+| `MKT_EMAIL_DASHBOARD_URL` | ✅ código | `.env.example` + plantilla correo |
+| DNS cutover lebytek.com | ⏳ | Bloqueado hasta smoke mensaje |
+
 ---
 
 ## api.lebytek.com
@@ -162,7 +178,27 @@ Branch: `feature/backoffice-api-integration` (until merge)
 
 ---
 
-## waapi.lebytek.com (congelado — panel fase final)
+## waapi.lebytek.com (panel cliente Fase 4)
+
+Ejecutar en vhost waapi (mismo codebase Framework; ver `docs/guides/portal-cliente-waapi.md`).
+
+### Entorno
+
+- [ ] `WAAPI_PORTAL_ENABLED=true`
+- [ ] `LEBYTEK_API_URL=https://api.lebytek.com/api/v1`
+- [ ] `MKT_EMAIL_DASHBOARD_URL=https://waapi.lebytek.com/portal/acceso` (en lebytek.com prod)
+- [ ] **No** requiere `LEBYTEK_API_TOKEN` plataforma (clientes usan token por-tenant)
+
+### Smoke panel
+
+- [ ] `curl -sfI https://waapi.lebytek.com/portal/acceso` → 200
+- [ ] Login con token demo del correo → dashboard muestra instancia
+- [ ] QR funcional para instancia `waiting_qr`
+- [ ] `grep -r "green-api" app/Presentation/Controllers/Publico/WaapiPortalController.php` → 0 hits
+
+---
+
+## waapi.lebytek.com (legacy — reemplazado por sección anterior)
 
 Ejecutar en el VPS/sitio de waapi (ruta según CloudPanel del proyecto skeleton).
 

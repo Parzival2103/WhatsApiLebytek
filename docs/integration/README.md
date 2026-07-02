@@ -19,9 +19,13 @@ Spec: [../superpowers/specs/2026-06-30-integration-docs-alignment-design.md](../
 | 0/1 | E2E + back-office | ✅ |
 | 2b | Lifecycle demo (baja/expiración) | ✅ |
 | 2a | Vertical api `/messages` | ✅ código (smoke VPS pendiente) |
-| 3 | Go-live DNS/docs/main | ⏳ tras 2a |
-| 4/5 | waapi + madurez | 📋 spec listo |
+| 3 | Go-live DNS/docs/main | ⏳ tras 2a smoke |
+| 4/5 | waapi panel + madurez | 🚧 en progreso (portal código listo; VPS/docs/crons pendientes) |
 
 Spec remediación: [../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md](../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md)
 
-> **No avanzar a Fase 4/5** hasta cumplir criterios §6 del spec de remediación.
+Spec Fase 4/5: [../superpowers/specs/2026-07-02-integration-phase4-5-design.md](../superpowers/specs/2026-07-02-integration-phase4-5-design.md)
+
+Guía portal waapi: [../guides/portal-cliente-waapi.md](../guides/portal-cliente-waapi.md)
+
+> **Fase 4/5 en progreso:** portal waapi en Framework (`WAAPI_PORTAL_ENABLED`). Pendiente: smoke VPS mensaje, deploy waapi, crons, DNS.

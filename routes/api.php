@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CredentialsController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IncomingWebhookController;
 use App\Http\Controllers\Api\V1\InstanceController;
@@ -66,6 +67,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'ensure.api.permission', 'api.i
         ->middleware('permission:mensajes.ver')
         ->withoutMiddleware('api.idempotency')
         ->name('api.v1.messages.show');
+
+    Route::put('/credentials/green-api', [CredentialsController::class, 'updateGreenApi'])
+        ->middleware('permission:credenciales.gestionar')
+        ->name('api.v1.credentials.green-api');
 });
 
 Route::prefix('v1/webhooks')->middleware(['webhook.signature', 'webhook.idempotency'])->group(function (): void {
