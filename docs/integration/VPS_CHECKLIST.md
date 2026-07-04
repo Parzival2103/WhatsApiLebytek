@@ -84,8 +84,8 @@ Usuario CloudPanel: `lebytek-api`
 
 - [ ] `ssh lebytek-vps` funciona sin contraseña
 - [ ] `git remote -v` apunta a `https://github.com/Parzival2103/WhatsApiLebytek.git`
-- [ ] `git pull origin main` sin conflictos
-- [ ] `composer install --no-dev` OK
+- [x] `git pull origin main` sin conflictos (2026-07-04, HEAD a454121 ≥ dcc46d0)
+- [x] `composer install --no-dev` OK (2026-07-04)
 - [ ] `npm ci && npm run build` OK
 
 ### Entorno
@@ -100,14 +100,14 @@ Usuario CloudPanel: `lebytek-api`
 
 ### Migraciones y token plataforma
 
-- [ ] `php artisan migrate --force`
+- [x] `php artisan migrate --force` (2026-07-04, Nothing to migrate — int_mensajes ya aplicadas)
 - [ ] `php artisan integration:issue-waapi-token --revoke` → token copiado a **lebytek.com** `.env` (`LEBYTEK_API_TOKEN` — consumidor primario)
 - [ ] waapi.lebytek.com mantiene copia legacy del token para fase panel (no orquestador)
 
 ### Servicios
 
-- [ ] `supervisorctl status lebytek-api-horizon` → RUNNING
-- [ ] `php artisan horizon:status` → running
+- [x] `supervisorctl status lebytek-api-horizon` → RUNNING (2026-07-04)
+- [x] `php artisan horizon:status` → running (2026-07-04)
 
 ### Smoke tests
 
@@ -118,9 +118,9 @@ curl -sfI https://api.lebytek.com/admin/login | head -1
 curl -sf -H "Authorization: Bearer <token>" https://api.lebytek.com/api/v1/health
 ```
 
-- [ ] `/up` → 200
+- [x] `/up` → 200 (2026-07-04)
 - [ ] `/admin/login` accesible
-- [ ] `/api/v1/health` con token → 200, `checks.database.ok` y `checks.redis.ok`
+- [x] `/api/v1/health` con token → 200, `checks.database.ok` y `checks.redis.ok` (2026-07-04)
 - [ ] Horizon accesible para email en `HORIZON_ALLOWED_EMAILS`
 
 ### Provisioning E2E (desde back-office o curl)
