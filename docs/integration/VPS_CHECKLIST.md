@@ -71,7 +71,7 @@ Auditoría local pre-implementación panel waapi (spec `2026-07-02-integration-p
 | Panel waapi código | ✅ | `routes/waapi_portal.php` + `WaapiPortalController` |
 | waapi VPS live | ⏳ | Deploy pendiente operador |
 | `MKT_EMAIL_DASHBOARD_URL` | ✅ código | `.env.example` + plantilla correo |
-| DNS cutover lebytek.com | ⏳ | Bloqueado hasta smoke mensaje |
+| DNS cutover lebytek.com | ⏳ | DNS público aún FTP legacy; vhost VPS verificado localmente (2026-07-04) |
 
 ---
 
@@ -145,23 +145,23 @@ Branch: `feature/backoffice-api-integration` (until merge)
 
 ### Código
 
-- [ ] Clone/pull Lebytek_Framework feature branch
-- [ ] `composer install --no-dev`
+- [x] Clone/pull Lebytek_Framework feature branch (2026-07-04, `feature/backoffice-api-integration`, HEAD baca01f ≥ 0868af2)
+- [x] `composer install --no-dev` (2026-07-04)
 - [ ] Document root → `public/`
-- [ ] `.env`: DB, MAIL_*, LEBYTEK_API_URL, LEBYTEK_API_TOKEN
+- [x] `.env`: DB, MAIL_*, LEBYTEK_API_URL, LEBYTEK_API_TOKEN (2026-07-01; health exit=0 re-verificado 2026-07-04)
 - [x] `LEBYTEK_API_TOKEN` + `MAIL_*` smtp configurados (2026-07-01)
-- [x] Deploy ≥ `c2d51cd` — `DEPLOY_DONE health_rc=0` (2026-07-01)
+- [x] Deploy ≥ `0868af2` — HEAD `baca01f`, `lebytek-api-health.php` exit=0 (2026-07-04)
 
 ### BD
 
-- [ ] Installer or `php scripts/migrate.php` + seed
+- [x] Installer or `php scripts/migrate.php` + seed (2026-07-04, schema aplicado)
 - [ ] Marketing module + dom_mkt_leads
 
 ### Smoke
 
-- [ ] Landing `/` loads
-- [ ] `/admin/login` loads
-- [ ] `GET /api/v1/health` from server using LEBYTEK_API_TOKEN → 200
+- [x] Landing `/` loads (2026-07-04, vhost VPS `--resolve` → 200; DNS público aún FTP legacy → 405)
+- [x] `/login` loads (2026-07-04, vhost VPS → 200; ruta admin es `/login`, no `/admin/login`)
+- [x] `GET /api/v1/health` from server using LEBYTEK_API_TOKEN → 200 (2026-07-04, `lebytek-api-health.php` exit=0)
 
 ### E2E provisioning (back-office)
 
