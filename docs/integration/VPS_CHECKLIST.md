@@ -13,7 +13,7 @@ Criterios de aceptación del spec `2026-07-01-integration-e2e-phase0-1-design.md
 - [x] Deploy lebytek ≥ `c2d51cd` — `health_rc=0` en `vps-deploy-lebytek-com.sh` (2026-07-01)
 - [x] `php scripts/lebytek-api-health.php` → exit 0 (2026-07-01)
 - [x] Smoke E2E provisioning verde — botón **Provisionar demo (api)** en CRUD leads (2026-07-01)
-- [ ] Cron health cada 5 min — script listo en repo; **pendiente confirmar crontab operador en VPS**
+- [x] Cron health cada 5 min — crontab confirmado (2026-07-04; ver § Remediación Crons)
 - [x] `VPS_CHECKLIST.md` actualizado con resultados (2026-07-01)
 
 Flujo E2E manual: crear lead `validada` → clic **Provisionar demo (api)** → verificar `api_tenant_public_id`, `estado=demo_enviada`, correo con token + base URL (sin token Green).
@@ -47,8 +47,19 @@ Capturar salida en este checklist al confirmar:
 crontab -l -u lebytek
 ```
 
-- [ ] Cron health cada 5 min: `php /home/lebytek/htdocs/lebytek.com/scripts/lebytek-api-health.php`
-- [ ] Cron expire demos diario 03:00: `php /home/lebytek/htdocs/lebytek.com/scripts/expire-api-demos.php`
+Salida capturada (2026-07-04):
+
+```
+*/5 * * * * cd /home/lebytek/htdocs/lebytek.com && php scripts/lebytek-api-health.php >> storage/logs/api-health.log 2>&1
+0 3 * * * cd /home/lebytek/htdocs/lebytek.com && php scripts/expire-api-demos.php 30 >> storage/logs/expire-api-demos.log 2>&1
+*/5 * * * * cd /home/lebytek/htdocs/lebytek.com && php scripts/lebytek-api-health.php >> storage/logs/api-health.log 2>&1
+0 3 * * * cd /home/lebytek/htdocs/lebytek.com && php scripts/expire-api-demos.php 30 >> storage/logs/expire-demos.log 2>&1
+```
+
+> ⚠️ **Duplicados:** el crontab tiene cada job ×2 (logs distintos en expire). Dejar solo un par antes de cerrar G5.
+
+- [x] Cron health cada 5 min (2026-07-04, manual `exit=0`, log sin token)
+- [x] Cron expire demos diario 03:00 (2026-07-04)
 
 ## Remediación — Go-live Fase 3 (bloqueado hasta R1 smoke verde)
 
@@ -67,9 +78,9 @@ Auditoría local pre-implementación panel waapi (spec `2026-07-02-integration-p
 | Token demo `mensajes.*` | ✅ | `LeadApiProvisioningService` Framework |
 | waapi deploy mode | **Enfoque B** | Mismo tree Framework; `WAAPI_PORTAL_ENABLED=true` en vhost waapi |
 | `/messages` smoke VPS móvil | ⏳ | Remediación §2a paso 3 pendiente |
-| Cron health VPS | ⏳ | Sin confirmar crontab operador |
+| Cron health VPS | ✅ | crontab confirmado 2026-07-04 (dedupe pendiente) |
 | Panel waapi código | ✅ | `routes/waapi_portal.php` + `WaapiPortalController` |
-| waapi VPS live | ⏳ | Deploy pendiente operador |
+| waapi VPS live | ✅ | `/portal/acceso` GET 200 (2026-07-04) |
 | `MKT_EMAIL_DASHBOARD_URL` | ✅ código | `.env.example` + plantilla correo |
 | DNS cutover lebytek.com | ⏳ | DNS público aún FTP legacy; vhost VPS verificado localmente (2026-07-04) |
 
@@ -170,7 +181,7 @@ Branch: `feature/backoffice-api-integration` (until merge)
 3. Verificar: `api_tenant_public_id` NOT NULL, `estado=demo_enviada`, correo recibido
 
 - [x] Smoke E2E provisioning verde (2026-07-01)
-- [ ] Cron health cada 5 min — **pendiente confirmar crontab** (`scripts/lebytek-api-health.php` listo)
+- [x] Cron health cada 5 min + expire 03:00 — crontab confirmado (2026-07-04)
 
 ### DNS
 
