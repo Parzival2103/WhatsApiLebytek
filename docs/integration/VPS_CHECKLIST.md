@@ -184,17 +184,17 @@ Ejecutar en vhost waapi (mismo codebase Framework; ver `docs/guides/portal-clien
 
 ### Entorno
 
-- [ ] `WAAPI_PORTAL_ENABLED=true`
-- [ ] `LEBYTEK_API_URL=https://api.lebytek.com/api/v1`
-- [ ] `MKT_EMAIL_DASHBOARD_URL=https://waapi.lebytek.com/portal/acceso` (en lebytek.com prod)
-- [ ] **No** requiere `LEBYTEK_API_TOKEN` plataforma (clientes usan token por-tenant)
+- [x] `WAAPI_PORTAL_ENABLED=true` (2026-07-04, vhost `/home/lebytek-waapi/htdocs/waapi.lebytek.com`)
+- [x] `LEBYTEK_API_URL=https://api.lebytek.com/api/v1` (2026-07-04)
+- [x] `MKT_EMAIL_DASHBOARD_URL=https://waapi.lebytek.com/portal/acceso` (en lebytek.com prod, 2026-07-04)
+- [ ] **No** requiere `LEBYTEK_API_TOKEN` plataforma — ⚠️ legacy presente en waapi `.env`; portal usa token por-tenant (revisar eliminar)
 
 ### Smoke panel
 
-- [ ] `curl -sfI https://waapi.lebytek.com/portal/acceso` → 200
+- [x] `curl /portal/acceso` → 200 GET (2026-07-04; `curl -I` devuelve 405 — usar GET)
 - [ ] Login con token demo del correo → dashboard muestra instancia
 - [ ] QR funcional para instancia `waiting_qr`
-- [ ] `grep -r "green-api" app/Presentation/Controllers/Publico/WaapiPortalController.php` → 0 hits
+- [x] `grep -r "green-api" app/Presentation/Controllers/Publico/WaapiPortalController.php` → 0 hits (2026-07-04)
 
 ---
 
