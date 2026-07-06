@@ -23,7 +23,8 @@ pest()->extend(TestCase::class)
     ->in('Unit/Dashboard');
 
 pest()->extend(TestCase::class)
-    ->in('Unit/Queue');
+    ->use(RefreshDatabase::class)
+    ->in('Unit/Services');
 
 /*
 |--------------------------------------------------------------------------

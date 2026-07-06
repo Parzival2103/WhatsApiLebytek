@@ -6,6 +6,7 @@ use App\Jobs\TransactionalMessageJob;
 use App\Models\Core\Tenant;
 use App\Models\Integration\Instancia;
 use App\Models\Integration\Mensaje;
+use App\Services\GreenApi\InstanceStateSyncService;
 use App\Services\GreenApi\WhatsappModuleGuard;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +14,7 @@ class MessageSendService
 {
     public function __construct(
         private readonly WhatsappModuleGuard $moduleGuard,
+        private readonly InstanceStateSyncService $stateSync,
     ) {}
 
     /**
@@ -30,6 +32,10 @@ class MessageSendService
 
         if ($instancia->tenant_id !== $tenantId) {
             abort(404);
+        }
+
+        if ($instancia->status !== 'authorized') {
+            $instancia = $this->stateSync->refreshFromGreen($instancia);
         }
 
         if ($instancia->status !== 'authorized') {

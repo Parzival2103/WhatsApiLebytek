@@ -86,6 +86,22 @@ Auditoría local pre-implementación panel waapi (spec `2026-07-02-integration-p
 
 ---
 
+## Gate pre-brainstorm — Smoke E2E (G2)
+
+Ejecutar UNA sola vez en prod/staging VPS. Hard-gate: pasos 4, 5 y 6 deben ser ✅ antes de G3.
+
+| # | Paso | Comando / acción | Pass | Fecha | Operador |
+|---|------|------------------|------|-------|----------|
+| 1 | Provision demo | CRUD lead `validada` → **Provisionar demo (api)** | [ ] | | |
+| 2 | 2º correo | Token por-tenant + base URL + CTA waapi | [ ] | | |
+| 3 | QR | `GET /instances/{id}/qr` o panel → escanear | [ ] | | |
+| 4 | Authorized | `GET /instances/{id}` → `status=authorized` | [ ] | | |
+| 5 | Mensaje | `smoke-send-test-message.php` → WhatsApp en móvil | [ ] | | |
+| 6 | Panel waapi | Login token → dashboard → QR coherente | [ ] | | |
+| 7 | Baja demo | Dar de baja → `demo_baja`, instancias gone | [ ] | | |
+
+---
+
 ## api.lebytek.com
 
 Ruta: `/home/lebytek-api/htdocs/api.lebytek.com`  

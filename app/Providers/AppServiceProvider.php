@@ -44,5 +44,14 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($key);
         });
+
+        RateLimiter::for('messages-send', function (Request $request) {
+            $user = $request->user();
+            $key = $user
+                ? 'tenant:'.($user->tenant_id ?? 'platform').':user:'.$user->id
+                : 'ip:'.$request->ip();
+
+            return Limit::perMinute(10)->by($key);
+        });
     }
 }

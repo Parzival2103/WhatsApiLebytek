@@ -8,6 +8,7 @@ use App\Http\Resources\Api\V1\InstanceResource;
 use App\Models\Integration\Instancia;
 use App\Services\GreenApi\InstanceClient;
 use App\Services\GreenApi\InstanceProvisioningService;
+use App\Services\GreenApi\InstanceStateSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -21,6 +22,7 @@ class InstanceController extends Controller
 {
     public function __construct(
         private readonly InstanceProvisioningService $provisioningService,
+        private readonly InstanceStateSyncService $stateSync,
     ) {}
 
     /**
@@ -67,6 +69,10 @@ class InstanceController extends Controller
     {
         $tenantId = $this->resolveTenantAccess($request);
         $this->ensureInstanceBelongsToTenant($instancia, $tenantId);
+
+        if ($instancia->status !== 'authorized') {
+            $instancia = $this->stateSync->refreshFromGreen($instancia);
+        }
 
         return new InstanceResource($instancia);
     }

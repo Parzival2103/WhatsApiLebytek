@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\TenantController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware(['auth:sanctum', 'ensure.api.permission', 'api.idempotency'])->group(function (): void {
+Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.permission', 'api.idempotency'])->group(function (): void {
     Route::get('/health', HealthController::class)
         ->middleware('permission:api.health')
         ->withoutMiddleware('api.idempotency')
@@ -60,7 +60,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'ensure.api.permission', 'api.i
         ->name('api.v1.instances.destroy');
 
     Route::post('/messages', [MessageController::class, 'store'])
-        ->middleware('permission:mensajes.enviar')
+        ->middleware(['permission:mensajes.enviar', 'throttle:messages-send'])
         ->name('api.v1.messages.store');
 
     Route::get('/messages/{mensaje:public_id}', [MessageController::class, 'show'])

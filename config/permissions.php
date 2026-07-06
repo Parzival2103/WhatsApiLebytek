@@ -41,4 +41,15 @@ return [
         'mensajes.ver',
         'credenciales.gestionar',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Demo client API tokens (correo demo / api-client@tenants...)
+    |--------------------------------------------------------------------------
+    */
+    'demo_client_abilities' => [
+        'instancias.ver',
+        'mensajes.enviar',
+        'mensajes.ver',
+    ],
 ];

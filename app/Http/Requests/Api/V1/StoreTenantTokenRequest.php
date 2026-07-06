@@ -20,7 +20,11 @@ class StoreTenantTokenRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'abilities' => ['nullable', 'array'],
-            'abilities.*' => ['string', Rule::in(['instancias.ver'])],
+            'abilities.*' => ['string', Rule::in([
+                'instancias.ver',
+                'mensajes.enviar',
+                'mensajes.ver',
+            ])],
         ];
     }
 }

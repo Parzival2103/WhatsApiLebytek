@@ -18,9 +18,12 @@ Spec: [../superpowers/specs/2026-06-30-integration-docs-alignment-design.md](../
 |------|--------|--------|
 | 0/1 | E2E + back-office | ✅ |
 | 2b | Lifecycle demo (baja/expiración) | ✅ |
-| 2a | Vertical api `/messages` | ✅ código (smoke VPS pendiente) |
-| 3 | Go-live DNS/docs/main | ⏳ tras 2a smoke |
-| 4/5 | waapi panel + madurez | 🚧 en progreso (portal código listo; VPS/docs/crons pendientes) |
+| 2a | Vertical api `/messages` | ✅ código · ⏳ smoke VPS móvil |
+| 3 | Go-live DNS/docs/main | ⏳ tras gate G2 |
+| 4 | Portal waapi (lectura) | ✅ código · ⏳ deploy VPS |
+| 5 | Madurez (campañas, Sentry, webhooks) | 📋 post-gate |
+
+**Gate obligatorio antes del siguiente brainstorm:** [../superpowers/specs/2026-07-02-integration-pre-brainstorm-gate-design.md](../superpowers/specs/2026-07-02-integration-pre-brainstorm-gate-design.md)
 
 Spec remediación: [../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md](../superpowers/specs/2026-07-02-integration-roadmap-remediation-design.md)
 
