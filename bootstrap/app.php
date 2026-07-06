@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhook.idempotency' => \App\Http\Middleware\WebhookIdempotency::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'api.idempotency' => \App\Http\Middleware\ApiIdempotencyKey::class,
+            'track.tenant.activity' => \App\Http\Middleware\TrackTenantActivity::class,
             'acting.tenant' => \App\Http\Middleware\ResolveActingTenant::class,
         ]);
     })

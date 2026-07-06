@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountStatusController;
 use App\Http\Controllers\Api\V1\CredentialsController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IncomingWebhookController;
@@ -9,7 +10,7 @@ use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\UsageController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.permission', 'api.idempotency'])->group(function (): void {
+Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.permission', 'api.idempotency', 'track.tenant.activity'])->group(function (): void {
     Route::get('/health', HealthController::class)
         ->middleware('permission:api.health')
         ->withoutMiddleware('api.idempotency')

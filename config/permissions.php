@@ -21,6 +21,7 @@ return [
         'instancias.eliminar',
         'mensajes.enviar',
         'mensajes.ver',
+        'cuenta.ver',
         'credenciales.gestionar',
     ],
 
@@ -39,6 +40,7 @@ return [
         'instancias.eliminar',
         'mensajes.enviar',
         'mensajes.ver',
+        'cuenta.ver',
         'credenciales.gestionar',
     ],
 
@@ -51,5 +53,6 @@ return [
         'instancias.ver',
         'mensajes.enviar',
         'mensajes.ver',
+        'cuenta.ver',
     ],
 ];

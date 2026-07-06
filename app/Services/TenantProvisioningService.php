@@ -52,7 +52,16 @@ class TenantProvisioningService
     }
 
     /**
-     * @param  array{name?: string, isActive?: bool|null}  $data
+     * @param  array{
+     *     name?: string,
+     *     isActive?: bool|null,
+     *     commercialStatus?: string,
+     *     planSlug?: string,
+     *     planName?: string,
+     *     demoStartedAt?: string,
+     *     demoExpiresAt?: string,
+     *     messagesMonthlyLimit?: int|null,
+     * }  $data
      */
     public function update(Tenant $tenant, array $data): Tenant
     {
@@ -64,6 +73,30 @@ class TenantProvisioningService
 
         if (array_key_exists('isActive', $data)) {
             $attributes['is_active'] = (bool) $data['isActive'];
+        }
+
+        if (array_key_exists('commercialStatus', $data) && is_string($data['commercialStatus'])) {
+            $attributes['commercial_status'] = $data['commercialStatus'];
+        }
+
+        if (array_key_exists('planSlug', $data) && is_string($data['planSlug'])) {
+            $attributes['plan_slug'] = $data['planSlug'];
+        }
+
+        if (array_key_exists('planName', $data) && is_string($data['planName'])) {
+            $attributes['plan_name'] = $data['planName'];
+        }
+
+        if (array_key_exists('demoStartedAt', $data) && is_string($data['demoStartedAt'])) {
+            $attributes['demo_started_at'] = $data['demoStartedAt'];
+        }
+
+        if (array_key_exists('demoExpiresAt', $data) && is_string($data['demoExpiresAt'])) {
+            $attributes['demo_expires_at'] = $data['demoExpiresAt'];
+        }
+
+        if (array_key_exists('messagesMonthlyLimit', $data)) {
+            $attributes['messages_monthly_limit'] = $data['messagesMonthlyLimit'];
         }
 
         if ($attributes !== []) {
