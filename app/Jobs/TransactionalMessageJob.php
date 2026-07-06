@@ -4,8 +4,11 @@ namespace App\Jobs;
 
 use App\Exceptions\GreenApiException;
 use App\Jobs\Middleware\RateLimitedWithRedis;
+use App\Models\Core\Tenant;
 use App\Models\Integration\Mensaje;
+use App\Services\AccountStatusService;
 use App\Services\GreenApi\InstanceClient;
+use App\Services\TenantUsageService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -35,7 +38,7 @@ class TransactionalMessageJob implements ShouldQueue
         ];
     }
 
-    public function handle(): void
+    public function handle(AccountStatusService $accountStatusService, TenantUsageService $usageService): void
     {
         $mensaje = Mensaje::query()
             ->withoutGlobalScope('tenant')
@@ -69,6 +72,12 @@ class TransactionalMessageJob implements ShouldQueue
                 'sent_at' => now(),
                 'error' => null,
             ]);
+
+            $tenant = Tenant::query()->find($mensaje->tenant_id);
+            if ($tenant !== null) {
+                $usageService->increment($tenant, 'messages_sent_month_'.now()->format('Y-m'));
+                $accountStatusService->recordFirstMessage($tenant);
+            }
         } catch (GreenApiException $e) {
             Log::warning('TransactionalMessageJob Green API failure', [
                 'mensaje_id' => $mensaje->id,

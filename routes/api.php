@@ -75,6 +75,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
         ->withoutMiddleware('api.idempotency')
         ->name('api.v1.usage');
 
+    Route::post('/account/status', [AccountStatusController::class, 'status'])
+        ->middleware('permission:cuenta.ver')
+        ->withoutMiddleware('api.idempotency')
+        ->name('api.v1.account.status');
+
     Route::put('/credentials/green-api', [CredentialsController::class, 'updateGreenApi'])
         ->middleware('permission:credenciales.gestionar')
         ->name('api.v1.credentials.green-api');

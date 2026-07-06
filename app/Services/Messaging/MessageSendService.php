@@ -6,6 +6,7 @@ use App\Jobs\TransactionalMessageJob;
 use App\Models\Core\Tenant;
 use App\Models\Integration\Instancia;
 use App\Models\Integration\Mensaje;
+use App\Services\AccountStatusService;
 use App\Services\GreenApi\InstanceStateSyncService;
 use App\Services\GreenApi\WhatsappModuleGuard;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ class MessageSendService
     public function __construct(
         private readonly WhatsappModuleGuard $moduleGuard,
         private readonly InstanceStateSyncService $stateSync,
+        private readonly AccountStatusService $accountStatusService,
     ) {}
 
     /**
@@ -40,6 +42,14 @@ class MessageSendService
 
         if ($instancia->status !== 'authorized') {
             abort(409, 'Instance not authorized for sending.');
+        }
+
+        $limit = $tenant->messages_monthly_limit;
+        if ($limit !== null) {
+            $sent = $this->accountStatusService->countMessagesSentThisMonth($tenantId);
+            if ($sent >= $limit) {
+                abort(429, 'Monthly message quota exceeded.');
+            }
         }
 
         $normalizedRecipient = preg_replace('/\D+/', '', $recipient) ?? $recipient;

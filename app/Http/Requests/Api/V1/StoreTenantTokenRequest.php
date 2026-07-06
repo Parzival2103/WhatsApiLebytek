@@ -24,6 +24,7 @@ class StoreTenantTokenRequest extends FormRequest
                 'instancias.ver',
                 'mensajes.enviar',
                 'mensajes.ver',
+                'cuenta.ver',
             ])],
         ];
     }
