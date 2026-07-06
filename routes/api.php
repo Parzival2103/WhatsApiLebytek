@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\IncomingWebhookController;
 use App\Http\Controllers\Api\V1\InstanceController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\TenantController;
+use App\Http\Controllers\Api\V1\UsageController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.permission', 'api.idempotency'])->group(function (): void {
@@ -67,6 +68,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
         ->middleware('permission:mensajes.ver')
         ->withoutMiddleware('api.idempotency')
         ->name('api.v1.messages.show');
+
+    Route::get('/usage', UsageController::class)
+        ->middleware('permission:mensajes.ver')
+        ->withoutMiddleware('api.idempotency')
+        ->name('api.v1.usage');
 
     Route::put('/credentials/green-api', [CredentialsController::class, 'updateGreenApi'])
         ->middleware('permission:credenciales.gestionar')
