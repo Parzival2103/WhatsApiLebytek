@@ -38,7 +38,7 @@ api emite un token Sanctum propio del tenant durante el provisioning (ver `POST 
 | Header | `Authorization: Bearer {token por-tenant}` |
 | Emisión | `POST /tenants/{publicId}/tokens` (solo token de plataforma) — devuelto **una sola vez** en claro |
 | Confinamiento | confinado a su propio `tenant_id`; **ignora** `X-Tenant-Id` |
-| Permisos | `instancias.ver`, `mensajes.enviar`, `mensajes.ver` (**implementado**) |
+| Permisos | `instancias.ver`, `mensajes.enviar`, `mensajes.ver`, `cuenta.ver` (**implementado**) |
 
 El back-office entrega este token al cliente en el "2º correo" (junto al enlace/login a waapi). Pago manual (correo/transferencia) lo gestiona `lebytek.com`.
 
@@ -291,6 +291,50 @@ Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances
 **Flujo:** valida instancia `authorized` → crea `int_mensajes` (`queued`) → dispatch `TransactionalMessageJob` → `202` con `MessageResource`.
 
 **Idempotencia:** mismo `Idempotency-Key` + tenant → respuesta cacheada con el mensaje existente (status `202` vía middleware HTTP).
+
+### `GET /usage`
+
+**Estado:** **Implementado**  
+**Permiso:** `mensajes.ver`  
+**Idempotency-Key:** no requerido  
+
+Contadores agregados: `messagesSent`, `messagesReceived`, `messagesSentByStatus`.
+
+### `POST /account/status`
+
+**Estado:** **Implementado**  
+**Permiso:** `cuenta.ver` (incluido en token demo)  
+**Idempotency-Key:** no requerido  
+**Body:** `{}` opcional  
+
+Consulta cuota comercial del tenant autenticado: días restantes de demo, mensajes restantes del mes, paquete contratado y timestamp de la petición.
+
+**Respuesta 200 (ejemplo):**
+
+```json
+{
+  "requestedAt": "2026-07-06T21:43:00+00:00",
+  "commercialStatus": "demo",
+  "plan": {
+    "slug": "demo",
+    "name": "Demo",
+    "messagesPerMonthLimit": 100
+  },
+  "demo": {
+    "startedAt": "2026-06-06T10:00:00+00:00",
+    "expiresAt": "2026-07-06T10:00:00+00:00",
+    "daysRemaining": 23,
+    "isExpired": false
+  },
+  "usage": {
+    "messagesSentThisMonth": 12,
+    "messagesRemainingThisMonth": 88,
+    "messagesLimitThisMonth": 100
+  }
+}
+```
+
+**Cuota:** si `messagesSentThisMonth >= messagesLimitThisMonth`, `POST /messages` responde `429` con mensaje de cuota excedida.
 
 ### `GET /messages/{publicId}`
 
