@@ -44,7 +44,7 @@ onMounted(() => {
             >
                 {{ appName }}
             </h1>
-            <p class="mt-4 text-lg opacity-80">
+            <p class="mt-4 text-lg text-red-600">
                 {{ t('welcome.tagline') }}
             </p>
             <div class="mt-8 flex items-center justify-center gap-4">
