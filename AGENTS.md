@@ -77,3 +77,30 @@ Ver `docs/automation/README.md` y `.cursor/rules/automation-safety.mdc`.
 | ID | Archivo | Trigger |
 |----|---------|---------|
 | AUTOMATION-01 | `docs/automation/AUTOMATION-01-daily-audit.md` | Diario ~08:00 |
+
+## Cursor Cloud specific instructions
+
+Notas para agentes cloud que arrancan en una VM con el update script ya ejecutado (`composer install`, `npm install`). Comandos estándar: ver `README.md` y `CLAUDE.md`.
+
+### PHP 8.4 (no 8.3)
+
+- **Se requiere PHP 8.4**, aunque `composer.json` declare `php: ^8.3`. El `composer.lock` fija Symfony 8.1, que exige `php >=8.4.1`; con PHP 8.3 `composer install` falla.
+- Por esta razón **el CI (`.github/workflows/tests.yml`) está roto**: usa PHP 8.3 y aborta en el paso de instalación de dependencias (nunca llega a ejecutar los tests). Esto es preexistente, no lo introdujo el setup.
+
+### Servicios (arrancar manualmente; no van en el update script)
+
+- **Redis** (colas/cache/sesiones): `sudo redis-server --daemonize yes` (verificar con `redis-cli ping`).
+- **MySQL**: `sudo service mysql start`. BD `lebytekapi`, usuario `lebytekapi` (sin password) en `127.0.0.1:3306` (creados durante el setup, viven en el snapshot). Coincide con `.env.example`.
+- **App (dev, todo en uno)**: `composer dev` levanta `php artisan serve` (:8000) + `queue:listen` + `pail` (logs) + `npm run dev` (Vite :5173) concurrentemente.
+- `.env` ya está configurado (APP_KEY, MySQL, Redis). Tras migraciones nuevas correr `php artisan migrate` manualmente.
+
+### Verificación / hello-world
+
+- Panel admin: `http://127.0.0.1:8000/admin/login` — `admin@sistema.local` / `password` (tras `php artisan migrate && php artisan db:seed`).
+- API: emitir token con `php artisan integration:issue-waapi-token`, luego p.ej. `GET /api/v1/health` y `POST /api/v1/tenants` (header `Idempotency-Key` obligatorio en POST) con `Authorization: Bearer <token>`.
+
+### Tests
+
+- `composer test` (Pest). La salida es **una sola línea JSON** (logging estructurado), no el reporte clásico de Pest.
+- Hay **6 fallos preexistentes** no relacionados con el entorno: `tests/Unit/Queue/*` fallan con "Target class [config] does not exist" (no están vinculados al `TestCase` de Laravel en `tests/Pest.php`), y los `tests/Feature/Upload/*` fallan en `TestResponseAssert`. El resto (115/121) pasa.
+- Lint: `./vendor/bin/pint --test` (reporta issues de estilo preexistentes).
