@@ -170,4 +170,4 @@ Let's Encrypt vía CloudPanel/certbot. Renovación automática.
 
 - **No** usar `admin@sistema.local` / `password` en producción; usar `ProductionSeeder` con `ADMIN_INITIAL_PASSWORD`.
 - Generar assets frontend (`npm run build`) en cada deploy; CloudPanel sirve desde `public/build`.
-- OpenAPI/Scribe se regenera en deploy (`scribe:generate`); outputs en `.gitignore`.
+- OpenAPI/Scribe: `knuckleswtf/scribe` va en **`require`** (no `require-dev`) para que `composer install --no-dev` deje las rutas `/docs`, `/docs.openapi` y `/docs.postman` activas. Regenerar en cada deploy con `php artisan scribe:generate` (artefactos en `.gitignore`).

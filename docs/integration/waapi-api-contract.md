@@ -8,7 +8,15 @@ Contrato técnico de integración del motor **api.lebytek.com** (WhatsApiLebytek
 
 **Versión:** `v1`  
 **Base URL:** `https://api.lebytek.com/api/v1`  
-**OpenAPI (Scribe):** `https://api.lebytek.com/docs` (generado en deploy)
+**OpenAPI (Scribe):** generado en cada deploy (`php artisan scribe:generate`):
+
+| Recurso | URL |
+|---------|-----|
+| Docs HTML | https://api.lebytek.com/docs |
+| OpenAPI YAML | https://api.lebytek.com/docs.openapi |
+| Colección Postman | https://api.lebytek.com/docs.postman |
+
+`knuckleswtf/scribe` está en `require` (producción) para que estas rutas existan tras `composer install --no-dev`.
 
 ---
 
