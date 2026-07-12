@@ -428,6 +428,13 @@ php artisan integration:issue-waapi-token --revoke
 # Copiar token → lebytek.com .env LEBYTEK_API_TOKEN
 ```
 
+Tras deploy que añade abilities a clientes demo (p. ej. `cuenta.ver`), sincronizar usuarios `api-client+*@tenants.lebytek.internal` ya provisionados:
+
+```bash
+php artisan tenants:sync-client-permissions --dry-run
+php artisan tenants:sync-client-permissions
+```
+
 Variables api (código actual — ver `config/nucleo.php`):
 
 ```env

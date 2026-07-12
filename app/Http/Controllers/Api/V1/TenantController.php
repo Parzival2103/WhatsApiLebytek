@@ -98,7 +98,7 @@ class TenantController extends Controller
         $this->ensurePlatformService($request);
 
         $validated = $request->validated();
-        $abilities = $validated['abilities'] ?? ['instancias.ver'];
+        $abilities = $validated['abilities'] ?? config('permissions.demo_client_abilities');
 
         $accessToken = $this->tenantTokenService->issue(
             $tenant,
