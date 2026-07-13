@@ -1,7 +1,6 @@
 <?php
 
 use App\Services\Messaging\RecipientNormalizer;
-use InvalidArgumentException;
 
 test('normalizes e164 digits and strips non-digits', function () {
     $n = new RecipientNormalizer;

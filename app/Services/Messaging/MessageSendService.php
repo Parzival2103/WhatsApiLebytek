@@ -17,6 +17,7 @@ class MessageSendService
         private readonly WhatsappModuleGuard $moduleGuard,
         private readonly InstanceStateSyncService $stateSync,
         private readonly AccountStatusService $accountStatusService,
+        private readonly RecipientNormalizer $recipientNormalizer,
     ) {}
 
     /**
@@ -52,7 +53,7 @@ class MessageSendService
             }
         }
 
-        $normalizedRecipient = preg_replace('/\D+/', '', $recipient) ?? $recipient;
+        $normalizedRecipient = $this->recipientNormalizer->normalize($recipient);
         $payloadHash = hash('sha256', $tenantId.':'.$idempotencyKey);
 
         $existing = Mensaje::query()

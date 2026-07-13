@@ -146,3 +146,54 @@ test('GET messages returns sent status', function () {
         ->assertOk()
         ->assertJsonPath('status', 'sent');
 });
+
+test('tenant token can POST message to group recipient', function () {
+    $tenant = Tenant::factory()->create();
+    Module::factory()->create(['tenant_id' => $tenant->id, 'module_key' => 'whatsapp', 'is_enabled' => true]);
+    $instancia = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo(['mensajes.enviar', 'mensajes.ver']);
+    $token = $client->createToken('client', ['mensajes.enviar', 'mensajes.ver'])->plainTextToken;
+
+    $group = '120363012345678901@g.us';
+
+    $response = $this->withToken($token)
+        ->postJson(route('api.v1.messages.store'), [
+            'recipient' => $group,
+            'body' => 'Hola grupo',
+            'instancePublicId' => $instancia->public_id,
+        ], idempotencyHeaders());
+
+    $response->assertAccepted()
+        ->assertJsonPath('status', 'queued')
+        ->assertJsonPath('recipient', $group);
+
+    expect(Mensaje::query()->where('tenant_id', $tenant->id)->value('recipient'))->toBe($group);
+    Bus::assertDispatched(TransactionalMessageJob::class);
+});
+
+test('POST messages rejects invalid group recipient with 422', function () {
+    $tenant = Tenant::factory()->create();
+    Module::factory()->create(['tenant_id' => $tenant->id, 'module_key' => 'whatsapp', 'is_enabled' => true]);
+    $instancia = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo('mensajes.enviar');
+    $token = $client->createToken('client', ['mensajes.enviar'])->plainTextToken;
+
+    $this->withToken($token)
+        ->postJson(route('api.v1.messages.store'), [
+            'recipient' => '120363012345678901@c.us',
+            'body' => 'No',
+            'instancePublicId' => $instancia->public_id,
+        ], idempotencyHeaders())
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['recipient']);
+});
