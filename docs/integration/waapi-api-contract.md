@@ -296,6 +296,23 @@ Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances
 }
 ```
 
+**`recipient` formats (required):**
+
+| Tipo | Ejemplo | Notas |
+|------|---------|--------|
+| Teléfono E.164 sin `+` | `5215512345678` | Solo dígitos; la API ignora espacios/`+` de entrada |
+| ID de grupo WhatsApp | `120363012345678901@g.us` | ChatId completo; no enviar solo los dígitos del grupo |
+
+Ejemplo grupo:
+
+```json
+{
+  "recipient": "120363012345678901@g.us",
+  "body": "Aviso para el grupo",
+  "instancePublicId": "01JINST..."
+}
+```
+
 **Flujo:** valida instancia `authorized` → crea `int_mensajes` (`queued`) → dispatch `TransactionalMessageJob` → `202` con `MessageResource`.
 
 **Idempotencia:** mismo `Idempotency-Key` + tenant → respuesta cacheada con el mensaje existente (status `202` vía middleware HTTP).
@@ -350,7 +367,7 @@ Consulta cuota comercial del tenant autenticado: días restantes de demo, mensaj
 **Permiso:** `mensajes.ver`  
 **Idempotency-Key:** no requerido  
 
-Respuesta: `publicId`, `status` (`queued`/`sent`/`failed`), `recipient`, `body`, `error`, timestamps. **Sin** token Green.
+Respuesta: `publicId`, `status` (`queued`/`sent`/`failed`), `recipient`, `body`, `error`, timestamps. **Sin** tokens del proveedor.
 
 ---
 
