@@ -183,6 +183,35 @@ test('distinct state transitions within the same second are not treated as dupli
         ->and($instancia->status)->toBe('authorized');
 });
 
+test('distinct incoming calls within the same second are not treated as duplicates', function () {
+    $server = [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
+    ];
+
+    $post = function (string $chatId) use ($server) {
+        return $this->call(
+            'POST',
+            route('api.v1.webhooks.incoming'),
+            [],
+            [],
+            [],
+            $server,
+            json_encode([
+                'typeWebhook' => 'incomingCall',
+                'instanceData' => ['idInstance' => 1103334442],
+                'timestamp' => 1720000500,
+                'from' => $chatId,
+                'status' => 'offer',
+            ]),
+        );
+    };
+
+    $post('5215550001@c.us')->assertOk()->assertJson(['duplicate' => false]);
+    $post('5215550002@c.us')->assertOk()->assertJson(['duplicate' => false]);
+    $post('5215550002@c.us')->assertOk()->assertJson(['duplicate' => true]);
+});
+
 test('non scalar idMessage falls through to the composite key instead of colliding', function () {
     Instancia::factory()->create([
         'id_instance' => '1107776665',

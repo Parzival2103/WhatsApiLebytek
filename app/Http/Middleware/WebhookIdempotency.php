@@ -74,11 +74,15 @@ class WebhookIdempotency
         $timestamp = $this->scalar($payload['timestamp'] ?? null);
 
         if ($typeWebhook !== '' && $idInstance !== '' && $timestamp !== '') {
+            $senderData = is_array($payload['senderData'] ?? null) ? $payload['senderData'] : [];
+
             return $this->composite([
                 $typeWebhook,
                 $idInstance,
                 $timestamp,
                 $this->scalar($payload['stateInstance'] ?? null),
+                $this->scalar($senderData['chatId'] ?? $payload['chatId'] ?? $payload['from'] ?? null),
+                substr(sha1($request->getContent()), 0, 16),
             ]);
         }
 
