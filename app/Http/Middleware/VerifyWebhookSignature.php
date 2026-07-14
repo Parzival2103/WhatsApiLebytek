@@ -30,16 +30,21 @@ class VerifyWebhookSignature
         }
 
         $authorization = $request->header('Authorization', '');
+        $authorization = is_string($authorization) ? trim($authorization) : '';
 
-        if (is_string($authorization) && preg_match('/^Bearer\s+(\S+)$/i', $authorization, $matches) === 1) {
-            if (hash_equals($secret, $matches[1])) {
-                return $this->accept($request, $next, 'bearer');
-            }
+        if ($authorization === '') {
+            $this->reject($request, 'none', 'missing_credentials', 'Missing webhook authentication.');
+        }
 
+        if (preg_match('/^Bearer\s+(\S+)$/i', $authorization, $matches) !== 1) {
+            $this->reject($request, 'none', 'unsupported_authorization', 'Unsupported webhook authorization header.');
+        }
+
+        if (! hash_equals($secret, $matches[1])) {
             $this->reject($request, 'bearer', 'invalid_bearer_token', 'Invalid webhook bearer token.');
         }
 
-        $this->reject($request, 'none', 'missing_credentials', 'Missing webhook authentication.');
+        return $this->accept($request, $next, 'bearer');
     }
 
     private function accept(Request $request, Closure $next, string $mode): Response

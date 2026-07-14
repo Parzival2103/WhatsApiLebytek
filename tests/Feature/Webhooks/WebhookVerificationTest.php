@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
+
 beforeEach(function () {
     config(['services.webhooks.secret' => 'test-webhook-secret']);
 });
@@ -104,6 +106,44 @@ test('invalid hmac does not fall back to bearer on same request', function () {
         ],
         $body,
     )->assertUnauthorized();
+});
+
+test('webhook rejects unsupported authorization scheme as unsupported_authorization', function () {
+    Log::spy();
+
+    $this->postJson(route('api.v1.webhooks.incoming'), ['event' => 'x'], [
+        'X-Event-Id' => 'evt-basic-001',
+        'Authorization' => 'Basic '.base64_encode('user:test-webhook-secret'),
+    ])->assertUnauthorized();
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context) => $context['reason'] === 'unsupported_authorization'
+    )->once();
+});
+
+test('webhook rejects malformed bearer token as unsupported_authorization', function () {
+    Log::spy();
+
+    $this->postJson(route('api.v1.webhooks.incoming'), ['event' => 'x'], [
+        'X-Event-Id' => 'evt-bearer-malformed-001',
+        'Authorization' => 'Bearer test-webhook secret',
+    ])->assertUnauthorized();
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context) => $context['reason'] === 'unsupported_authorization'
+    )->once();
+});
+
+test('webhook rejects absent authorization as missing_credentials', function () {
+    Log::spy();
+
+    $this->postJson(route('api.v1.webhooks.incoming'), ['event' => 'x'], [
+        'X-Event-Id' => 'evt-none-002',
+    ])->assertUnauthorized();
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context) => $context['reason'] === 'missing_credentials'
+    )->once();
 });
 
 test('webhook returns 500 when secret is not configured', function () {
