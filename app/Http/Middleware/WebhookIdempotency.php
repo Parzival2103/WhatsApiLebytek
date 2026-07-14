@@ -11,12 +11,7 @@ class WebhookIdempotency
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $eventId = $request->header('X-Event-Id');
-
-        if (! is_string($eventId) || trim($eventId) === '') {
-            abort(422, 'Missing X-Event-Id header.');
-        }
-
+        $eventId = $this->resolveEventId($request);
         $cacheKey = 'webhook:event:'.sha1($eventId);
 
         if (Cache::has($cacheKey)) {
@@ -33,5 +28,37 @@ class WebhookIdempotency
         }
 
         return $response;
+    }
+
+    private function resolveEventId(Request $request): string
+    {
+        $header = $request->header('X-Event-Id');
+
+        if (is_string($header) && trim($header) !== '') {
+            return trim($header);
+        }
+
+        $payload = $request->all();
+
+        $idMessage = $payload['idMessage'] ?? null;
+        if ($idMessage !== null && $idMessage !== '') {
+            return (string) $idMessage;
+        }
+
+        $idWebhook = $payload['idWebhook'] ?? null;
+        if ($idWebhook !== null && $idWebhook !== '') {
+            return (string) $idWebhook;
+        }
+
+        $typeWebhook = (string) ($payload['typeWebhook'] ?? '');
+        $instanceData = is_array($payload['instanceData'] ?? null) ? $payload['instanceData'] : [];
+        $idInstance = (string) ($instanceData['idInstance'] ?? $payload['idInstance'] ?? '');
+        $timestamp = $payload['timestamp'] ?? null;
+
+        if ($typeWebhook !== '' && $idInstance !== '' && $timestamp !== null && $timestamp !== '') {
+            return $typeWebhook.'|'.$idInstance.'|'.(string) $timestamp;
+        }
+
+        return sha1($request->getContent());
     }
 }

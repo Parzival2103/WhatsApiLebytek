@@ -430,13 +430,20 @@ Respuesta: `publicId`, `status` (`queued`/`sent`/`failed`), `recipient`, `body`,
 
 ## Webhooks entrantes (Green API → api)
 
-**No consumidos por waapi.** Green API envía eventos solo a api.
+**No consumidos por waapi.** Green API (y otros emisores firmados) envían eventos a api.
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/v1/webhooks/incoming` | HMAC `X-Webhook-Signature` + `X-Event-Id` |
+| POST | `/api/v1/webhooks/incoming` | **HMAC** header `X-Webhook-Signature` = `HMAC-SHA256(rawBody, WEBHOOK_SECRET)`, **or** `Authorization: Bearer {WEBHOOK_SECRET}` when the signature header is absent |
 
-Secreto: `WEBHOOK_SECRET` en `.env` de api.
+Idempotencia:
+
+- Prefer header `X-Event-Id` when present.
+- Otherwise api derives a key from Green payload fields (`idMessage` / `idWebhook` / `typeWebhook|idInstance|timestamp`) or `sha1(rawBody)`.
+
+Same `WEBHOOK_SECRET` is configured on Green instances as `webhookUrlToken` (Green sends it back as Bearer).
+
+Invalid HMAC does **not** fall back to Bearer on the same request.
 
 ---
 
