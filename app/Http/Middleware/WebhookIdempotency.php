@@ -49,7 +49,7 @@ class WebhookIdempotency
             return trim($header);
         }
 
-        $payload = $request->all();
+        $payload = $this->jsonBody($request);
 
         $typeWebhook = $this->scalar($payload['typeWebhook'] ?? null);
 
@@ -87,6 +87,16 @@ class WebhookIdempotency
         }
 
         return sha1($request->getContent());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function jsonBody(Request $request): array
+    {
+        $decoded = json_decode($request->getContent(), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
