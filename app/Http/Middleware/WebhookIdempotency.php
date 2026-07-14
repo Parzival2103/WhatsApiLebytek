@@ -10,12 +10,14 @@ use Throwable;
 
 class WebhookIdempotency
 {
+    private const int RESERVATION_SECONDS = 120;
+
     public function handle(Request $request, Closure $next): Response
     {
         $eventId = $this->resolveEventId($request);
         $cacheKey = 'webhook:event:'.sha1($eventId);
 
-        if (! Cache::add($cacheKey, true, now()->addDay())) {
+        if (! Cache::add($cacheKey, 'processing', now()->addSeconds(self::RESERVATION_SECONDS))) {
             return response()->json([
                 'received' => true,
                 'duplicate' => true,
@@ -30,7 +32,9 @@ class WebhookIdempotency
             throw $e;
         }
 
-        if (! $response->isSuccessful()) {
+        if ($response->isSuccessful()) {
+            Cache::put($cacheKey, true, now()->addDay());
+        } else {
             Cache::forget($cacheKey);
         }
 
