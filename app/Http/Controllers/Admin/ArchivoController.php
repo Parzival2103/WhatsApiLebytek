@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ArchivoController extends Controller
@@ -27,7 +28,7 @@ class ArchivoController extends Controller
                 $request->user(),
                 $validated['purpose'],
             );
-        } catch (InvalidArgumentException $exception) {
+        } catch (InvalidArgumentException|RuntimeException $exception) {
             throw ValidationException::withMessages([
                 'file' => [$exception->getMessage()],
             ]);
