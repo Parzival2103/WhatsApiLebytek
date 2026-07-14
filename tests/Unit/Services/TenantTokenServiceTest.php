@@ -46,3 +46,14 @@ test('issue repairs existing api client user missing tenant binding', function (
     expect($clientUser->isPlatformAdmin())->toBeFalse();
     expect($clientUser->can('instancias.ver'))->toBeTrue();
 });
+
+test('revokeClientTokens deletes sanctum tokens for api client user', function () {
+    $tenant = Tenant::factory()->create(['slug' => 'revoke-me']);
+    $service = app(TenantTokenService::class);
+
+    $issued = $service->issue($tenant, 'demo-token');
+    $tokenId = $issued->accessToken->getKey();
+
+    expect($service->revokeClientTokens($tenant))->toBe(1);
+    expect(\Laravel\Sanctum\PersonalAccessToken::query()->find($tokenId))->toBeNull();
+});
