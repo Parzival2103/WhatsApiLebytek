@@ -118,6 +118,34 @@ test('green message status events sharing idMessage are not treated as duplicate
     ])->assertOk()->assertJson(['duplicate' => true]);
 });
 
+test('same idMessage from different instances is not treated as a duplicate', function () {
+    $server = [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
+    ];
+
+    $post = function (int $idInstance) use ($server) {
+        return $this->call(
+            'POST',
+            route('api.v1.webhooks.incoming'),
+            [],
+            [],
+            [],
+            $server,
+            json_encode([
+                'typeWebhook' => 'incomingMessageReceived',
+                'instanceData' => ['idInstance' => $idInstance],
+                'timestamp' => 1720000400,
+                'idMessage' => 'green-msg-collision',
+            ]),
+        );
+    };
+
+    $post(1101111111)->assertOk()->assertJson(['duplicate' => false]);
+    $post(1102222222)->assertOk()->assertJson(['duplicate' => false]);
+    $post(1102222222)->assertOk()->assertJson(['duplicate' => true]);
+});
+
 test('distinct state transitions within the same second are not treated as duplicates', function () {
     $instancia = Instancia::factory()->create([
         'id_instance' => '1105554443',

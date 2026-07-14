@@ -23,13 +23,6 @@ class IncomingWebhookController extends Controller
      */
     public function __invoke(Request $request): JsonResponse
     {
-        if ((bool) $request->attributes->get('webhook_duplicate', false)) {
-            return response()->json([
-                'received' => true,
-                'duplicate' => true,
-            ]);
-        }
-
         $payload = $request->all();
         $typeWebhook = (string) ($payload['typeWebhook'] ?? '');
 

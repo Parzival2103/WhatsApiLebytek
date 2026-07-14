@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class WebhookIdempotency
 {
@@ -14,17 +15,23 @@ class WebhookIdempotency
         $eventId = $this->resolveEventId($request);
         $cacheKey = 'webhook:event:'.sha1($eventId);
 
-        if (Cache::has($cacheKey)) {
+        if (! Cache::add($cacheKey, true, now()->addDay())) {
             return response()->json([
                 'received' => true,
                 'duplicate' => true,
             ]);
         }
 
-        $response = $next($request);
+        try {
+            $response = $next($request);
+        } catch (Throwable $e) {
+            Cache::forget($cacheKey);
 
-        if ($response->isSuccessful()) {
-            Cache::put($cacheKey, true, now()->addDay());
+            throw $e;
+        }
+
+        if (! $response->isSuccessful()) {
+            Cache::forget($cacheKey);
         }
 
         return $response;
@@ -42,10 +49,14 @@ class WebhookIdempotency
 
         $typeWebhook = $this->scalar($payload['typeWebhook'] ?? null);
 
+        $instanceData = is_array($payload['instanceData'] ?? null) ? $payload['instanceData'] : [];
+        $idInstance = $this->scalar($instanceData['idInstance'] ?? $payload['idInstance'] ?? null);
+
         $idMessage = $this->scalar($payload['idMessage'] ?? null);
         if ($idMessage !== '') {
             return $this->composite([
                 $typeWebhook,
+                $idInstance,
                 $idMessage,
                 $this->scalar($payload['status'] ?? null),
             ]);
@@ -53,11 +64,9 @@ class WebhookIdempotency
 
         $idWebhook = $this->scalar($payload['idWebhook'] ?? null);
         if ($idWebhook !== '') {
-            return $this->composite([$typeWebhook, $idWebhook]);
+            return $this->composite([$typeWebhook, $idInstance, $idWebhook]);
         }
 
-        $instanceData = is_array($payload['instanceData'] ?? null) ? $payload['instanceData'] : [];
-        $idInstance = $this->scalar($instanceData['idInstance'] ?? $payload['idInstance'] ?? null);
         $timestamp = $this->scalar($payload['timestamp'] ?? null);
 
         if ($typeWebhook !== '' && $idInstance !== '' && $timestamp !== '') {
