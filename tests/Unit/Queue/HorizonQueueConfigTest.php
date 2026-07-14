@@ -2,9 +2,6 @@
 
 use App\Jobs\CampaignBatchJob;
 use App\Jobs\TransactionalMessageJob;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
 
 test('horizon defines isolated supervisors for default transactional and campaigns queues', function () {
     $defaults = config('horizon.defaults');

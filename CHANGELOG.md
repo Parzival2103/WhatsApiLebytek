@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- CI: pin Composer `platform.php` to 8.3 so Symfony resolves to 7.4 compatible with VPS/CI (local PHP 8.5 had locked Symfony 8.1)
+- Tests: boot Laravel `TestCase` for `Unit/Queue` so Horizon queue config tests pass
+
 ## [1.0.0] - 2026-07-14
 
 First stable production release. Deploy branch: `main` → `api.lebytek.com`.

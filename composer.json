@@ -89,8 +89,9 @@
             "php-http/discovery": true
         },
         "platform": {
-            "ext-pcntl": "8.0",
-            "ext-posix": "8.0"
+            "php": "8.3.32",
+            "ext-pcntl": "8.3",
+            "ext-posix": "8.3"
         }
     },
     "minimum-stability": "stable",
