@@ -50,6 +50,11 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          # Scribe and artisan use .env; tests already force sqlite via phpunit.xml
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          sed -i 's/^#* *DB_DATABASE=.*/DB_DATABASE=database\/database.sqlite/' .env
+          touch database/database.sqlite
+          php artisan migrate --force --no-interaction
 
       - name: Run tests
         env:
@@ -62,4 +67,7 @@ jobs:
         run: php artisan test
 
       - name: Generate API documentation
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
         run: php artisan scribe:generate --no-interaction
