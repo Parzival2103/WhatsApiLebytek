@@ -47,15 +47,43 @@ class PartnerClient
     public function deleteInstanceAccount(string $idInstance): void
     {
         $token = $this->requirePartnerToken();
-        $url = rtrim($this->baseUrl, '/')."/partner/deleteInstanceAccount/{$token}/{$idInstance}";
+        // Green Partner contract: POST /partner/deleteInstanceAccount/{partnerToken}
+        // with JSON body {"idInstance": <int64>}. Errors often return HTTP 200 + {"code":…}.
+        $url = rtrim($this->baseUrl, '/')."/partner/deleteInstanceAccount/{$token}";
 
-        $response = Http::timeout(30)->delete($url);
+        $response = Http::timeout(30)->asJson()->post($url, [
+            'idInstance' => (int) $idInstance,
+        ]);
+
+        /** @var array<string, mixed>|null $json */
+        $json = $response->json();
+        if (! is_array($json)) {
+            $json = null;
+        }
 
         if (! $response->successful()) {
             throw new GreenApiException(
                 'Partner deleteInstanceAccount failed: '.$response->body(),
                 $response->status(),
-                $response->json(),
+                $json,
+            );
+        }
+
+        if (is_array($json) && array_key_exists('code', $json)) {
+            $description = (string) ($json['description'] ?? 'Green partner error');
+
+            throw new GreenApiException(
+                'Partner deleteInstanceAccount failed: '.$description,
+                (int) $json['code'],
+                $json,
+            );
+        }
+
+        if (! is_array($json) || ($json['deleteInstanceAccount'] ?? false) !== true) {
+            throw new GreenApiException(
+                'Partner deleteInstanceAccount returned unexpected response: '.$response->body(),
+                $response->status(),
+                $json,
             );
         }
     }
