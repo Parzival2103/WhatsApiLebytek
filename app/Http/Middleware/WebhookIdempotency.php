@@ -40,25 +40,52 @@ class WebhookIdempotency
 
         $payload = $request->all();
 
-        $idMessage = $payload['idMessage'] ?? null;
-        if ($idMessage !== null && $idMessage !== '') {
-            return (string) $idMessage;
+        $typeWebhook = $this->scalar($payload['typeWebhook'] ?? null);
+
+        $idMessage = $this->scalar($payload['idMessage'] ?? null);
+        if ($idMessage !== '') {
+            return $this->composite([
+                $typeWebhook,
+                $idMessage,
+                $this->scalar($payload['status'] ?? null),
+            ]);
         }
 
-        $idWebhook = $payload['idWebhook'] ?? null;
-        if ($idWebhook !== null && $idWebhook !== '') {
-            return (string) $idWebhook;
+        $idWebhook = $this->scalar($payload['idWebhook'] ?? null);
+        if ($idWebhook !== '') {
+            return $this->composite([$typeWebhook, $idWebhook]);
         }
 
-        $typeWebhook = (string) ($payload['typeWebhook'] ?? '');
         $instanceData = is_array($payload['instanceData'] ?? null) ? $payload['instanceData'] : [];
-        $idInstance = (string) ($instanceData['idInstance'] ?? $payload['idInstance'] ?? '');
-        $timestamp = $payload['timestamp'] ?? null;
+        $idInstance = $this->scalar($instanceData['idInstance'] ?? $payload['idInstance'] ?? null);
+        $timestamp = $this->scalar($payload['timestamp'] ?? null);
 
-        if ($typeWebhook !== '' && $idInstance !== '' && $timestamp !== null && $timestamp !== '') {
-            return $typeWebhook.'|'.$idInstance.'|'.(string) $timestamp;
+        if ($typeWebhook !== '' && $idInstance !== '' && $timestamp !== '') {
+            return $this->composite([
+                $typeWebhook,
+                $idInstance,
+                $timestamp,
+                $this->scalar($payload['stateInstance'] ?? null),
+            ]);
         }
 
         return sha1($request->getContent());
+    }
+
+    /**
+     * @param  list<string>  $parts
+     */
+    private function composite(array $parts): string
+    {
+        return implode('|', $parts);
+    }
+
+    private function scalar(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 }
