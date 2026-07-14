@@ -23,11 +23,7 @@ beforeEach(function () {
 
 function fakePngUpload(string $name = 'logo.png'): UploadedFile
 {
-    $png = base64_decode('iVBORw0KGgoAAAANSUhEhCQAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-    $path = tempnam(sys_get_temp_dir(), 'png');
-    file_put_contents($path, $png);
-
-    return new UploadedFile($path, $name, 'image/png', UPLOAD_ERR_OK, true);
+    return UploadedFile::fake()->image($name, 16, 16);
 }
 
 test('secure upload rejects svg files', function () {

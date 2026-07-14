@@ -3,11 +3,7 @@
 use App\Jobs\TransactionalMessageJob;
 use App\Models\Integration\Instancia;
 use App\Models\Integration\Mensaje;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 test('transactional job sends via green and marks message sent', function () {
     Http::fake([

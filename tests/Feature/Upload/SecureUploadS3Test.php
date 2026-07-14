@@ -22,10 +22,7 @@ beforeEach(function () {
 });
 
 test('secure upload stores on configured s3 disk', function () {
-    $png = base64_decode('iVBORw0KGgoAAAANSUhEhCQAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-    $path = tempnam(sys_get_temp_dir(), 'png');
-    file_put_contents($path, $png);
-    $file = new UploadedFile($path, 'logo.png', 'image/png', UPLOAD_ERR_OK, true);
+    $file = UploadedFile::fake()->image('logo.png', 16, 16);
 
     $this->actingAs($this->user)
         ->post(route('admin.archivos.store'), [
