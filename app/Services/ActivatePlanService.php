@@ -40,27 +40,6 @@ class ActivatePlanService
             ]);
         }
 
-        $orderRef = $data['orderExternalRef'];
-        $meta = $tenant->meta ?? [];
-
-        if (
-            $tenant->commercial_status === 'active'
-            && $tenant->plan_slug === $slug
-            && ($meta['activated_order_ref'] ?? null) === $orderRef
-        ) {
-            return [
-                'tenant' => $tenant,
-                'token' => null,
-                'plan' => [
-                    'slug' => $slug,
-                    'name' => $definition['name'],
-                    'messagesMonthlyLimit' => $tenant->messages_monthly_limit,
-                    'billingCycle' => (string) ($meta['billing_cycle'] ?? $data['billingCycle']),
-                ],
-                'created' => false,
-            ];
-        }
-
         try {
             $limit = PlanCatalog::resolveMessagesMonthlyLimit(
                 $slug,
@@ -72,17 +51,39 @@ class ActivatePlanService
             ]);
         }
 
+        $orderRef = $data['orderExternalRef'];
         $tokenName = $data['tokenName'] ?? "cliente-{$slug}";
         $abilities = config('permissions.demo_client_abilities');
 
         return DB::transaction(function () use ($tenant, $slug, $definition, $limit, $data, $orderRef, $tokenName, $abilities): array {
+            $tenant = Tenant::query()->whereKey($tenant->id)->lockForUpdate()->firstOrFail();
+            $meta = $tenant->meta ?? [];
+
+            if (
+                $tenant->commercial_status === 'active'
+                && $tenant->plan_slug === $slug
+                && ($meta['activated_order_ref'] ?? null) === $orderRef
+            ) {
+                return [
+                    'tenant' => $tenant,
+                    'token' => null,
+                    'plan' => [
+                        'slug' => $slug,
+                        'name' => $definition['name'],
+                        'messagesMonthlyLimit' => $tenant->messages_monthly_limit,
+                        'billingCycle' => (string) ($meta['billing_cycle'] ?? $data['billingCycle']),
+                    ],
+                    'created' => false,
+                ];
+            }
+
             $tenant->forceFill([
                 'commercial_status' => 'active',
                 'plan_slug' => $slug,
                 'plan_name' => $definition['name'],
                 'messages_monthly_limit' => $limit,
                 'demo_expires_at' => null,
-                'meta' => array_merge($tenant->meta ?? [], [
+                'meta' => array_merge($meta, [
                     'billing_cycle' => $data['billingCycle'],
                     'activated_order_ref' => $orderRef,
                     'activated_at' => now()->toIso8601String(),

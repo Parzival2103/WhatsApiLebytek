@@ -70,7 +70,26 @@ test('activate is semantically idempotent for same slug and order ref', function
 
     expect($first['created'])->toBeTrue()
         ->and($second['created'])->toBeFalse()
-        ->and($second['token'])->toBeNull();
+        ->and($second['token'])->toBeNull()
+        ->and(\Laravel\Sanctum\PersonalAccessToken::findToken($first['token']))->not->toBeNull();
+});
+
+test('starter ignores messagesMonthlyLimit override', function () {
+    $tenant = Tenant::factory()->create([
+        'slug' => 'activate-override',
+        'commercial_status' => 'demo',
+        'messages_monthly_limit' => 100,
+    ]);
+
+    $result = app(ActivatePlanService::class)->activate($tenant, [
+        'planSlug' => 'starter',
+        'billingCycle' => 'monthly',
+        'orderExternalRef' => '01JXORDEROVERRIDE1',
+        'messagesMonthlyLimit' => 999999,
+    ]);
+
+    expect($result['plan']['messagesMonthlyLimit'])->toBe(5000)
+        ->and($tenant->fresh()->messages_monthly_limit)->toBe(5000);
 });
 
 test('empresa requires messagesMonthlyLimit', function () {
