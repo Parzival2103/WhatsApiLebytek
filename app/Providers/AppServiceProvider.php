@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Core\MenuItem;
+use App\Models\Core\Tenant;
 use App\Observers\MenuItemObserver;
 use App\Services\GreenApi\PartnerClient;
+use App\Support\PlanRateResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,7 +53,14 @@ class AppServiceProvider extends ServiceProvider
                 ? 'tenant:'.($user->tenant_id ?? 'platform').':user:'.$user->id
                 : 'ip:'.$request->ip();
 
-            return Limit::perMinute(10)->by($key);
+            $tenant = null;
+            if ($user?->tenant_id) {
+                $tenant = Tenant::query()->find($user->tenant_id);
+            }
+
+            $perMinute = PlanRateResolver::httpSendPerMinute($tenant);
+
+            return Limit::perMinute($perMinute)->by($key);
         });
     }
 }

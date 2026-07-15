@@ -38,6 +38,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
         ->middleware('permission:tenants.gestionar')
         ->name('api.v1.tenants.tokens.store');
 
+    Route::post('/tenants/{tenant:public_id}/activate-plan', [TenantController::class, 'activatePlan'])
+        ->middleware('permission:tenants.gestionar')
+        ->name('api.v1.tenants.activate-plan');
+
     Route::get('/instances', [InstanceController::class, 'index'])
         ->middleware('permission:instancias.ver')
         ->withoutMiddleware('api.idempotency')

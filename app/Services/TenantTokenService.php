@@ -25,6 +25,23 @@ class TenantTokenService
     }
 
     /**
+     * Revoke all Sanctum tokens for the tenant api-client user (if present).
+     *
+     * @return int Number of tokens deleted
+     */
+    public function revokeClientTokens(Tenant $tenant): int
+    {
+        $email = "api-client+{$tenant->slug}@tenants.lebytek.internal";
+        $user = User::query()->where('email', $email)->where('tenant_id', $tenant->id)->first();
+
+        if ($user === null) {
+            return 0;
+        }
+
+        return $user->tokens()->delete();
+    }
+
+    /**
      * Spatie permission middleware checks user permissions, not Sanctum token abilities.
      *
      * @param  list<string>  $abilities

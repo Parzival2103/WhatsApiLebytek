@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ActivatePlanRequest;
 use App\Http\Requests\Api\V1\StoreTenantRequest;
 use App\Http\Requests\Api\V1\StoreTenantTokenRequest;
 use App\Http\Requests\Api\V1\UpdateTenantRequest;
 use App\Http\Resources\Api\V1\TenantResource;
 use App\Http\Resources\Api\V1\TenantTokenResource;
 use App\Models\Core\Tenant;
+use App\Services\ActivatePlanService;
 use App\Services\TenantProvisioningService;
 use App\Services\TenantTokenService;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +27,7 @@ class TenantController extends Controller
     public function __construct(
         private readonly TenantProvisioningService $provisioningService,
         private readonly TenantTokenService $tenantTokenService,
+        private readonly ActivatePlanService $activatePlanService,
     ) {}
 
     /**
@@ -109,6 +112,22 @@ class TenantController extends Controller
         return (new TenantTokenResource($accessToken))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Activate paid plan (platform only). Rotates tenant api-client token.
+     */
+    public function activatePlan(ActivatePlanRequest $request, Tenant $tenant): JsonResponse
+    {
+        $this->ensurePlatformService($request);
+
+        $result = $this->activatePlanService->activate($tenant, $request->validated());
+
+        return response()->json([
+            'tenant' => (new TenantResource($result['tenant']))->resolve(),
+            'token' => $result['token'],
+            'plan' => $result['plan'],
+        ], $result['created'] ? 201 : 200);
     }
 
     private function ensurePlatformService(Request $request): void
