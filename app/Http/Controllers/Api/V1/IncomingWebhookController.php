@@ -10,24 +10,19 @@ use Illuminate\Http\Request;
 /**
  * @group Webhooks
  *
- * Incoming webhook endpoints (HMAC signature + idempotency).
+ * Incoming webhook endpoints (HMAC signature or Bearer token + idempotency).
  */
 class IncomingWebhookController extends Controller
 {
     /**
      * Receive incoming webhook
      *
-     * Accepts signed webhook payloads. Duplicate deliveries with the same idempotency key return 200 without reprocessing.
+     * Accepts signed webhook payloads (HMAC `X-Webhook-Signature` or Green `Authorization: Bearer`).
+     * Green may omit `X-Event-Id`; idempotency falls back to payload-derived keys.
+     * Duplicate deliveries with the same idempotency key return 200 without reprocessing.
      */
     public function __invoke(Request $request): JsonResponse
     {
-        if ((bool) $request->attributes->get('webhook_duplicate', false)) {
-            return response()->json([
-                'received' => true,
-                'duplicate' => true,
-            ]);
-        }
-
         $payload = $request->all();
         $typeWebhook = (string) ($payload['typeWebhook'] ?? '');
 

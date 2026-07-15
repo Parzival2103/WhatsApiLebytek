@@ -112,12 +112,14 @@ HORIZON_MAIL=ops@tu-dominio.com
 # HORIZON_SLACK_WEBHOOK=
 # HORIZON_SLACK_CHANNEL=#alerts
 
+# Required for HMAC clients AND Green webhookUrlToken (Bearer on incoming webhooks)
 WEBHOOK_SECRET=<generar-secreto-hmac>
 
 GREEN_API_BASE_URL=https://api.green-api.com
 GREEN_API_INSTANCE=
 GREEN_API_TOKEN=
-GREEN_API_WEBHOOK_TOKEN=
+# Legacy/unused — use WEBHOOK_SECRET only (config/services.php maps green_api.webhook_secret)
+# GREEN_API_WEBHOOK_TOKEN=
 
 # Opcional (P2)
 # SENTRY_LARAVEL_DSN=

@@ -40,7 +40,7 @@ Auditoría exhaustiva del núcleo **WhatsApiLebytek** contra [`prompt2.md`](../.
 | 10 | Config cacheada Redis | **DONE** | `ConfigurationService`, tests invalidación |
 | 11 | PWA dinámica | **DONE** | `ManifestController`, `public/sw.js`, favicon/branding controllers |
 | 12 | Uploads seguros | **DONE** | `SecureUploadService`, tests; S3 requiere env producción |
-| 13 | Webhooks HMAC + idempotencia | **PARTIAL** | Middleware OK; tabla `int_webhooks` no existe; controller stub |
+| 13 | Webhooks HMAC/Bearer + idempotencia | **PARTIAL** | Dual auth OK (`X-Webhook-Signature` o `Authorization: Bearer`); dedupe por `X-Event-Id` o clave derivada del payload; tabla `int_webhooks` aún sin persistencia |
 | 14 | Colas + Horizon | **DONE** (stubs) | `config/horizon.php`, `TransactionalMessageJob`, `CampaignBatchJob` |
 | 15 | Pantallas mínimas admin | **DONE** | Landing, login, layout/tema/branding |
 | 16 | Bitácora + seguridad base | **DONE** | `AuditLogService`, append-only, `$fillable` explícito |
@@ -77,8 +77,8 @@ Auditoría exhaustiva del núcleo **WhatsApiLebytek** contra [`prompt2.md`](../.
 | API default-deny | `EnsureApiPermission` — ruta sin `permission:` → 403 | `DefaultDenyTest` |
 | Sanctum stateless | `auth:sanctum` en grupo `/api/v1` | `SanctumAuthTest` |
 | Idempotency-Key writes | `ApiIdempotencyKey` — 24h cache por user+key | Usado en tests tenant |
-| Webhook HMAC SHA-256 | `VerifyWebhookSignature` | `WebhookVerificationTest` |
-| Webhook dedupe | `WebhookIdempotency` (`X-Event-Id`) | Tests webhooks |
+| Webhook HMAC SHA-256 o Bearer | `VerifyWebhookSignature` | `WebhookVerificationTest`, `WebhookGreenBearerTest` |
+| Webhook dedupe | `WebhookIdempotency` (`X-Event-Id` o clave derivada) | Tests webhooks |
 | Uploads seguros | mimetype real, no SVG, re-encode GD | `SecureUploadTest` |
 | Credenciales cifradas | `encrypted:array` en `Credencial` | Modelo |
 | Bitácora append-only | `AuditLog` boot bloquea update/delete | `AuditLogServiceTest` |
