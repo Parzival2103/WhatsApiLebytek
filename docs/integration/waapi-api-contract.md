@@ -202,6 +202,8 @@ El back-office persiste `publicId` en `dom_mkt_leads.api_tenant_public_id`.
 **Acceso:** solo cuenta de plataforma  
 **Idempotency-Key:** requerido
 
+> Para desbloqueo pago (demo → plan), usar `POST …/activate-plan` (revoke + token nuevo). `PATCH` comercial sin rotar tokens queda desaconsejado.
+
 **Body (parcial):**
 
 ```json
@@ -250,6 +252,61 @@ Emite un **token Sanctum por-tenant** para que el cliente final llame a api dire
 ```
 
 > El campo `token` (texto en claro) se devuelve **una sola vez**; api guarda solo su hash (mecanismo estándar de Sanctum). Para rotar, emitir uno nuevo y revocar el anterior. El token queda confinado al `tenant_id` del path e ignora `X-Tenant-Id`.
+
+---
+
+### `POST /tenants/{publicId}/activate-plan`
+
+> **Estado implementación (api):** **Implementado** — `routes/api.php` (`api.v1.tenants.activate-plan`), `ActivatePlanService`, catálogo `config/plans.php`.
+
+**Permiso:** `tenants.gestionar`  
+**Acceso:** solo cuenta de plataforma (`ensurePlatformService`)  
+**Idempotency-Key:** requerido  
+
+Activa un plan de pago canónico (catálogo en `config/plans.php`) sobre el **mismo tenant/instancia** (Hybrid A). Actualiza cuota mensual y `commercialStatus=active`, limpia `demoExpiresAt`, guarda auditoría en `meta` (`billing_cycle`, `activated_order_ref`, `activated_at`), **revoca** tokens del api-client del tenant y emite uno nuevo.
+
+**Preferir este endpoint** frente a `PATCH /tenants/{publicId}` al autorizar cobro: un PATCH sin revoke deja válidos tokens demo filtrados.
+
+**Body:**
+
+```json
+{
+  "planSlug": "starter",
+  "billingCycle": "monthly",
+  "orderExternalRef": "01JXORDER…",
+  "messagesMonthlyLimit": null,
+  "tokenName": "cliente-paid-starter"
+}
+```
+
+| Campo | Tipo | Reglas |
+|-------|------|--------|
+| `planSlug` | string | requerido; `demo` \| `starter` \| `business` \| `empresa` |
+| `billingCycle` | string | `monthly` \| `annual` |
+| `orderExternalRef` | string | requerido; id de orden Framework (auditoría) |
+| `messagesMonthlyLimit` | int\|null | **solo** si `planSlug=empresa` (min/max en config); prohibido en otros slugs |
+| `tokenName` | string | opcional; default `cliente-{slug}` |
+
+**Respuesta 201** (primera activación):
+
+```json
+{
+  "tenant": { "publicId": "…", "commercialStatus": "active", "planSlug": "starter", "messagesMonthlyLimit": 5000 },
+  "token": "17|…",
+  "plan": {
+    "slug": "starter",
+    "name": "Starter",
+    "messagesMonthlyLimit": 5000,
+    "billingCycle": "monthly"
+  }
+}
+```
+
+**Respuesta 200:** misma forma cuando ya está `active` con el mismo `planSlug` + `orderExternalRef` (`token` será `null` — no se reemite). Replay con el mismo `Idempotency-Key` reutiliza la respuesta cacheada (incluido el token de la primera llamada).
+
+**Errores:** `403` no-plataforma · `404` tenant · `422` slug/override inválido.
+
+**Rate limits por plan (mismo delivery):** el limiter HTTP `messages-send` y el throttle Redis del job `TransactionalMessageJob` leen rates de `config/plans.php` según `plan_slug` del tenant (fallback `demo`).
 
 ---
 
