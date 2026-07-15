@@ -9,6 +9,7 @@ use App\Models\Integration\Mensaje;
 use App\Services\AccountStatusService;
 use App\Services\GreenApi\InstanceClient;
 use App\Services\TenantUsageService;
+use App\Support\PlanRateResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -32,9 +33,13 @@ class TransactionalMessageJob implements ShouldQueue
     {
         $mensaje = Mensaje::query()->withoutGlobalScope('tenant')->find($this->mensajeId);
         $tenantKey = $mensaje?->tenant_id ?? 'unknown';
+        $tenant = $mensaje?->tenant_id
+            ? Tenant::query()->find($mensaje->tenant_id)
+            : null;
+        $maxAttempts = PlanRateResolver::jobSendPerMinute($tenant);
 
         return [
-            new RateLimitedWithRedis("green-api:tenant:{$tenantKey}", maxAttempts: 30, decaySeconds: 60),
+            new RateLimitedWithRedis("green-api:tenant:{$tenantKey}", maxAttempts: $maxAttempts, decaySeconds: 60),
         ];
     }
 
