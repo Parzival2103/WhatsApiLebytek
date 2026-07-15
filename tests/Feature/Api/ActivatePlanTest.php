@@ -117,3 +117,48 @@ test('idempotency key replay returns same body', function () {
 
     expect($second->json())->toEqual($first->json());
 });
+
+test('semantic replay with different idempotency key returns 200 and null token', function () {
+    $platformToken = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'slug' => 'feat-activate-semantic',
+        'commercial_status' => 'demo',
+        'plan_slug' => 'demo',
+        'messages_monthly_limit' => 100,
+    ]);
+
+    $payload = [
+        'planSlug' => 'starter',
+        'billingCycle' => 'monthly',
+        'orderExternalRef' => '01JXORDERSEMANTIC1',
+        'tokenName' => 'cliente-paid-starter',
+    ];
+
+    $first = $this->withToken($platformToken)
+        ->postJson(
+            route('api.v1.tenants.activate-plan', $tenant->public_id),
+            $payload,
+            ['Idempotency-Key' => 'activate-semantic-first-'.uniqid()],
+        );
+
+    $first->assertCreated()
+        ->assertJsonPath('plan.slug', 'starter')
+        ->assertJsonPath('token', fn ($token) => is_string($token) && $token !== '');
+
+    $issuedToken = $first->json('token');
+
+    $second = $this->withToken($platformToken)
+        ->postJson(
+            route('api.v1.tenants.activate-plan', $tenant->public_id),
+            $payload,
+            ['Idempotency-Key' => 'activate-semantic-second-'.uniqid()],
+        );
+
+    $second->assertOk()
+        ->assertJsonPath('plan.slug', 'starter')
+        ->assertJsonPath('plan.messagesMonthlyLimit', 5000)
+        ->assertJsonPath('tenant.commercialStatus', 'active')
+        ->assertJsonPath('token', null);
+
+    expect(PersonalAccessToken::findToken($issuedToken))->not->toBeNull();
+});
