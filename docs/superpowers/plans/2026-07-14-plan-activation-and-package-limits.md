@@ -1,25 +1,40 @@
 # Plan Activation + Package Limits — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **SHIPPED (2026-07-14):** Tasks 1–7 landed on `main` via PR #14 (`30bc4b6`).
+> Residual test/ops work: [`2026-07-14-plan-activation-closure.md`](./2026-07-14-plan-activation-closure.md).
+> Checkboxes in Tasks 1–7 below are historical; treat them as done.
+>
+> **Do not re-run Tasks 1–7.** Prefer the updated design spec over this historical task body for *status*.
 
 **Goal:** Add a platform-only `POST /api/v1/tenants/{tenant}/activate-plan` that atomically upgrades a demo tenant to a paid catalog plan (quota + commercial fields), revokes demo Sanctum tokens, issues a fresh client token, and makes HTTP/job send throttles plan-aware.
 
-**Architecture:** Introduce `config/plans.php` as the only source of truth for slug → monthly quota + HTTP/job rates. `ActivatePlanService` runs inside a DB transaction: resolve catalog limits, update tenant (including new JSON `meta`), revoke api-client tokens via `TenantTokenService`, issue a new token with `demo_client_abilities`. Wire `RateLimiter::for('messages-send')` and `TransactionalMessageJob` Redis throttle to the same catalog through a tiny `PlanRateResolver`. Contract docs sync for Framework.
+**Architecture:** Introduce `config/plans.php` as the only source of truth for slug → monthly quota + HTTP/job rates. `ActivatePlanService` runs inside a DB transaction: resolve catalog limits, update tenant (including new JSON `meta`), revoke api-client tokens via `TenantTokenService`, issue a new token with `demo_client_abilities`. Wire `RateLimiter::for('messages-send')` and `TransactionalMessageJob` Redis throttle to the same catalog through a tiny `PlanRateResolver`. Contract docs live in this repo; Framework mirrors them in its hardening plan.
 
 **Tech Stack:** Laravel 13, Sanctum, Pest, Redis throttle middleware, existing platform RBAC (`tenants.gestionar` + `ensurePlatformService`)
 
 **Spec:** [`docs/superpowers/specs/2026-07-14-plan-activation-and-package-limits-design.md`](../specs/2026-07-14-plan-activation-and-package-limits-design.md)
 
-**Companion (out of this repo’s PR):** Framework Authorize → `LebytekApiClient::activatePlan` after this endpoint ships.
+**Companion plans (same purpose, three roles):**
+
+| Role | Repo | Plan |
+|------|------|------|
+| Historical ship (done) | this | **this file** — Tasks 1–7 on `main` |
+| Api residual tests + VPS smoke | this | [`2026-07-14-plan-activation-closure.md`](./2026-07-14-plan-activation-closure.md) |
+| Framework hardening + authorize flag | Lebytek_Framework | `docs/superpowers/plans/2026-07-14-manual-membership-purchase.md` (Tasks 1–7 + Task 8 human) |
+
+`LebytekApiClient::activatePlan` already ships on Framework `feature/backoffice-api-integration`.
 
 ## Global constraints
 
 - **Platform only.** Tenant Bearer must get 403 on activate-plan; never accept arbitrary quotas for non-`empresa` slugs.
+- **Unlock intent (callers):** Framework sends only `starter` \| `business` \| `empresa`. Never `demo`.
+- **Api validation (shipped):** `ActivatePlanRequest` uses `Rule::in(array_keys(catalog))`, so `demo` is technically accepted. That does **not** make `demo` a paid-unlock path — Framework must refuse before calling. Optional tighten (`Rule::in` paid-only) is **out of this historical plan**; do not reopen Tasks 1–7 for it.
 - **No re-provision / no new Green instance.** Same tenant + instance; Hybrid option A.
 - **Plain token once.** Same pattern as `issueToken` / `TenantTokenResource`.
 - **Idempotency-Key required** (v1 middleware). Semantic replay of same `planSlug`+`orderExternalRef`: 200 with `token: null`, no second revoke/issue.
 - **Do not weaken** `AccountStatusService` / monthly quota enforcement — only raise the limit from catalog.
 - **No deploy / SSH / VPS** unless the user explicitly orders it.
+- **No enable** of Framework `MKT_MEMBERSHIP_AUTHORIZE_ENABLED` from this repo.
 - **TDD:** failing tests before implementation in each code task.
 - **Commits:** only when the user asks (or when executing this plan with explicit commit approval). Messages below are suggested.
 
@@ -1063,19 +1078,22 @@ git commit -m "feat(plans): make message send HTTP and job throttles plan-aware"
 
 ### Task 7: Contract documentation
 
+> **Shipped:** canonical section is already **Implementado** in `docs/integration/waapi-api-contract.md`.  
+> Framework must **mirror that live section** (not the historical “Planificado” draft below). See companion plan Task 5.
+
 **Files:**
 - Modify: `docs/integration/waapi-api-contract.md`
 
 - [ ] **Step 1: Insert activate-plan section after `POST /tenants/{publicId}/tokens`**
 
-Insert before `### POST /instances` the following section (copy verbatim into the contract file):
+Insert before `### POST /instances` the following section (historical draft — on disk today use **Implementado** wording from the live contract file):
 
 ~~~~markdown
 ---
 
 ### `POST /tenants/{publicId}/activate-plan`
 
-> **Estado implementación (api):** **Planificado** → implementar con `docs/superpowers/plans/2026-07-14-plan-activation-and-package-limits.md`. Tras merge, marcar **Implementado**.
+> **Estado implementación (api):** **Implementado** — `routes/api.php` (`api.v1.tenants.activate-plan`), `ActivatePlanService`, catálogo `config/plans.php`.
 
 **Permiso:** `tenants.gestionar`  
 **Acceso:** solo cuenta de plataforma (`ensurePlatformService`)  
@@ -1099,11 +1117,11 @@ Activa un plan de pago canónico (catálogo en `config/plans.php`) sobre el **mi
 
 | Campo | Tipo | Reglas |
 |-------|------|--------|
-| `planSlug` | string | requerido; `demo` \| `starter` \| `business` \| `empresa` |
+| `planSlug` | string | catálogo api incluye `demo`\|`starter`\|`business`\|`empresa`; **unlock Framework** solo `starter`\|`business`\|`empresa` (nunca `demo`) |
 | `billingCycle` | string | `monthly` \| `annual` |
-| `orderExternalRef` | string | requerido; id de orden Framework (auditoría) |
+| `orderExternalRef` | string | requerido; id de orden Framework (`dom_mkt_ordenes.public_id`) |
 | `messagesMonthlyLimit` | int\|null | **solo** si `planSlug=empresa` (min/max en config); prohibido en otros slugs |
-| `tokenName` | string | opcional; default `cliente-{slug}` |
+| `tokenName` | string | opcional; default api `cliente-{slug}`; Framework envía `membresia-{slug}` |
 
 **Respuesta 201** (primera activación):
 
@@ -1181,19 +1199,75 @@ Expected: PASS (or only pre-existing failures unrelated — do not expand scope)
 | Effects: status, plan, quota, clear demo_expires_at, revoke, issue, 201 envelope | Tasks 4–5 |
 | Tenant cannot activate / cannot escalate via override | Task 5 |
 | Idempotent Idempotency-Key + same orderRef | Tasks 4–5 |
-| Prefer activate-plan over bare PATCH (docs) | Task 7 |
+| Prefer activate-plan over bare PATCH (docs) | Task 7 (shipped; contract **Implementado**) |
 | Plan-aware HTTP + job rates | Task 6 |
-| Contract sync | Task 7 |
+| Contract sync (canonical in this repo) | Task 7 — Framework **mirrors** in companion plan Task 5 (keep Framework never-`demo` note) |
 | Quota still AccountStatus/MessageSendService | Non-goal — no change |
-| Framework `LebytekApiClient::activatePlan` | Companion repo — out of scope here |
+| Framework client + authorize UI | Companion — already shipped; hardening plan owns gaps |
+| Framework handles HTTP 200 + `token: null` | Companion hardening Task 2 (**blocker** before Task 8 flag) |
+| Framework refuses authorize for `demo`/unknown slug | Companion hardening Task 2 |
+| Feature semantic 200 + job throttle assert | Closure plan Tasks 1–2 (not this file) |
+| Prod enable authorize flag | Companion Task 8 only after **sequence steps 2–4** |
 
 **Placeholder scan:** none intentional.  
 **Type consistency:** `planSlug` / `billingCycle` / `orderExternalRef` / `messagesMonthlyLimit` / `tokenName` used end-to-end; response keys `tenant` / `token` / `plan` with plan camelCase `messagesMonthlyLimit` + `billingCycle`.
 
 ---
 
+## Cross-repo alignment (canonical)
+
+Shared purpose: **admin Autorizar pago → api activate-plan → same tenant/instance + new Bearer**, with catalog quotas.
+
+Copy of this block must stay identical in Framework `2026-07-14-manual-membership-purchase.md` § Cross-repo alignment (and the sequence text in the api closure plan).
+
+### Shared invariants (must match companion plan)
+
+1. **Catalog SoT:** api `config/plans.php` (Starter 5000 / Business 80000 / rates). Framework `dom_mkt_paquetes` mirrors display limits for checkout snapshot; authorize must **not** send `messagesMonthlyLimit` for `starter`/`business`.
+2. **Unlock slugs (Framework rule):** Framework → api only `starter` \| `business` \| `empresa`. Never `demo`. Checkout already omits `empresa` from purchasable; authorize must also refuse `demo` / empty / unknown slug before HTTP call (Framework hardening Task 2).
+3. **Api vs caller on `demo`:** `demo` stays in api catalog for rate fallback. Shipped FormRequest may still accept `planSlug=demo`; contract table may list it. That is **not** a Framework unlock path — Framework never sends it. Do not “fix” api to reject `demo` as part of Framework hardening.
+4. **Payload map:**
+
+| Api body field | Framework source |
+|----------------|------------------|
+| `planSlug` | `dom_mkt_ordenes.paquete_slug` |
+| `billingCycle` | `ciclo` (`monthly` \| `annual`) |
+| `orderExternalRef` | `public_id` |
+| `tokenName` | `membresia-{slug}` (api default `cliente-{slug}` OK if omitted) |
+| `messagesMonthlyLimit` | **only** if `paquete_slug === 'empresa'` and snapshot non-null; omit otherwise |
+
+5. **Two idempotency layers:** (a) same `Idempotency-Key` → HTTP cache of first response (often 201 + token); (b) Framework `LebytekApiClient` **always** mints a new UUID on writes → admin retry hits **semantic** HTTP **200** + `token: null` (same `planSlug` + `orderExternalRef`), not the cache. Client treats any `<400` as success (200 and 201 both OK).
+6. **Framework authorize on semantic 200:** `markPaid` (already clears `api_activation_error`) + **no** email #3 when `token` is null/blank after `trim` (companion hardening Task 2 — **blocker** before enabling the flag).
+7. **Ops gate:** keep `MKT_MEMBERSHIP_AUTHORIZE_ENABLED=false` until **all** of: (a) api VPS `meta` + smoke 201/200 (closure Task 4), (b) Framework Task 2 deployed, (c) Framework VPS migrations + `MKT_BANK_*`. Then enable only via Framework Task 8.
+8. **No merge** Framework `feature/backoffice-api-integration` → `main` without explicit user order.
+
+| Concern | This repo (api) | Framework companion |
+|---------|-----------------|---------------------|
+| Catalog / rates | `config/plans.php` | `dom_mkt_paquetes`; no invented limits on authorize |
+| Unlock HTTP | `POST …/activate-plan` on `main` | `LebytekApiClient::activatePlan` → `AutorizarOrdenMembresiaUseCase` |
+| First success | HTTP **201** + `token` string | `markPaid` + email #3 |
+| Semantic replay | HTTP **200** + `token: null` | Hardening Task 2 — paid, no email #3 |
+| Refuse `demo` unlock | Catalog/rates only; FormRequest may still accept | Authorize pre-flight (Task 2) |
+| Residual tests / VPS | [`plan-activation-closure.md`](./2026-07-14-plan-activation-closure.md) | Hardening Tasks 1–7 + Task 8 ops |
+
+**Sequence (prod) — identical wording on api historical, api closure, and Framework plans:**
+
+```
+1. Api activate-plan on main (historical Tasks 1–7)    ✅ shipped
+2. Api closure: residual tests + VPS meta/smoke        → closure plan (Task 4 = human)
+3. Framework hardening Tasks 1–7 (incl. Task 2)        → Framework plan
+4. Framework VPS migrations + MKT_BANK_*               → Framework Task 8 (human)
+5. MKT_MEMBERSHIP_AUTHORIZE_ENABLED=true               → Framework Task 8
+                                                           after sequence steps 2, 3, and 4
+```
+
+Do **not** enable Framework authorize before sequence steps 2 **and** 3 (api smoke + null-token fix). Step 4 (Framework VPS bank/env) is also required before flipping the flag.
+
+---
+
 ## Execution handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-07-14-plan-activation-and-package-limits.md`.
+Historical ship plan — **complete on `main`**. Executors next:
 
-Ship order for Framework: merge/deploy this api endpoint before enabling production Authorize that calls it.
+1. **This repo:** [`2026-07-14-plan-activation-closure.md`](./2026-07-14-plan-activation-closure.md) (tests + human VPS smoke). Closure Task 4 must **not** enable the Framework flag — only confirms api is ready for authorize.
+2. **Framework repo:** `docs/superpowers/plans/2026-07-14-manual-membership-purchase.md` (hardening Tasks 1–7, then human Task 8).
+3. Enable `MKT_MEMBERSHIP_AUTHORIZE_ENABLED` only via Framework Task 8 after **sequence steps 2–4**.
