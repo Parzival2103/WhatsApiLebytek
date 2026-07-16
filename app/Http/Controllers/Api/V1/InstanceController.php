@@ -95,7 +95,12 @@ class InstanceController extends Controller
             abort(409, 'Instance not ready for QR');
         }
 
-        if ($instancia->qr_code !== null && $instancia->qr_expires_at !== null && $instancia->qr_expires_at->isFuture()) {
+        if (
+            ! $request->boolean('force')
+            && $instancia->qr_code !== null
+            && $instancia->qr_expires_at !== null
+            && $instancia->qr_expires_at->isFuture()
+        ) {
             return response()->json([
                 'qr' => $instancia->qr_code,
                 'expiresAt' => $instancia->qr_expires_at->toIso8601String(),

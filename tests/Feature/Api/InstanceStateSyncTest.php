@@ -96,3 +96,49 @@ test('POST messages returns 409 when Green reports notAuthorized despite DB auth
 
     expect($instancia->refresh()->status)->toBe('waiting_qr');
 });
+
+test('GET qr?force=1 bypasses cached QR and fetches a new one from Green', function () {
+    $tenant = Tenant::factory()->create();
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    $instancia = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'waiting_qr',
+        'id_instance' => '1109998890',
+        'api_token_instance' => 'green-secret',
+        'qr_code' => 'cached-old-qr',
+        'qr_expires_at' => now()->addSeconds(15),
+    ]);
+
+    Http::fake([
+        '*/waInstance1109998890/getStateInstance/*' => Http::response([
+            'stateInstance' => 'notAuthorized',
+        ], 200),
+        '*/waInstance1109998890/qr/*' => Http::response([
+            'type' => 'qrCode',
+            'message' => 'fresh-qr-base64',
+        ], 200),
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo('instancias.ver');
+    $token = $client->createToken('client', ['instancias.ver'])->plainTextToken;
+
+    $cached = $this->withToken($token)
+        ->getJson(route('api.v1.instances.qr', $instancia->public_id))
+        ->assertOk()
+        ->json('qr');
+
+    expect($cached)->toBe('cached-old-qr');
+
+    $forced = $this->withToken($token)
+        ->getJson(route('api.v1.instances.qr', $instancia->public_id).'?force=1')
+        ->assertOk()
+        ->json('qr');
+
+    expect($forced)->toBe('fresh-qr-base64')
+        ->and($instancia->refresh()->qr_code)->toBe('fresh-qr-base64');
+});
