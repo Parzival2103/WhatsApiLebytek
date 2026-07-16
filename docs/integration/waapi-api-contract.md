@@ -310,6 +310,66 @@ Activa un plan de pago canónico (catálogo en `config/plans.php`) sobre el **mi
 
 ---
 
+### `POST /tenants/{publicId}/cancel-commercial`
+
+> **Estado implementación (api):** **Implementado** — `routes/api.php` (`api.v1.tenants.cancel-commercial`), `CancelCommercialService`.
+
+**Permiso:** `tenants.gestionar`  
+**Acceso:** solo cuenta de plataforma  
+**Idempotency-Key:** requerido  
+
+Soft-cancel comercial: `commercialStatus=cancelled`, revoca tokens del api-client, **no** elimina tenant ni instancias Green.
+
+**Body (opcional):**
+
+```json
+{ "reason": "payment_failed_grace_expired" }
+```
+
+**Respuesta 200:**
+
+```json
+{
+  "tenant": { "publicId": "…", "commercialStatus": "cancelled" },
+  "commercialStatus": "cancelled",
+  "tokensRevoked": 1
+}
+```
+
+Idempotente si ya está `cancelled` (`tokensRevoked: 0`).
+
+---
+
+### `POST /tenants/{publicId}/reactivate-commercial`
+
+> **Estado implementación (api):** **Implementado** — `routes/api.php` (`api.v1.tenants.reactivate-commercial`), `ReactivateCommercialService`.
+
+**Permiso:** `tenants.gestionar`  
+**Acceso:** solo cuenta de plataforma  
+**Idempotency-Key:** requerido  
+
+Restaura `commercialStatus=active` tras soft-cancel, limpia `meta.cancelled_at` / `cancel_reason`, revoca tokens previos y emite uno nuevo.
+
+**Body (opcional):**
+
+```json
+{ "tokenName": "membresia-reactivated" }
+```
+
+**Respuesta 201** (primera reactivación):
+
+```json
+{
+  "tenant": { "publicId": "…", "commercialStatus": "active" },
+  "commercialStatus": "active",
+  "token": "17|…"
+}
+```
+
+**Respuesta 200:** si ya está `active` (`token` será `null`).
+
+---
+
 ### `POST /instances`
 
 **Estado:** **Implementado**  

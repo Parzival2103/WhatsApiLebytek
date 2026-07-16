@@ -42,6 +42,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
         ->middleware('permission:tenants.gestionar')
         ->name('api.v1.tenants.activate-plan');
 
+    Route::post('/tenants/{tenant:public_id}/cancel-commercial', [TenantController::class, 'cancelCommercial'])
+        ->middleware('permission:tenants.gestionar')
+        ->name('api.v1.tenants.cancel-commercial');
+
+    Route::post('/tenants/{tenant:public_id}/reactivate-commercial', [TenantController::class, 'reactivateCommercial'])
+        ->middleware('permission:tenants.gestionar')
+        ->name('api.v1.tenants.reactivate-commercial');
+
     Route::get('/instances', [InstanceController::class, 'index'])
         ->middleware('permission:instancias.ver')
         ->withoutMiddleware('api.idempotency')
