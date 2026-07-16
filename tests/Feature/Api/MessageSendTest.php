@@ -8,6 +8,7 @@ use App\Models\Integration\Mensaje;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
@@ -51,6 +52,12 @@ test('tenant token can POST messages and dispatch job', function () {
         'status' => 'authorized',
         'id_instance' => '1101000001',
         'api_token_instance' => 'green-secret',
+    ]);
+
+    Http::fake([
+        '*/waInstance1101000001/getStateInstance/*' => Http::response([
+            'stateInstance' => 'authorized',
+        ], 200),
     ]);
 
     $client = User::factory()->forTenant($tenant)->create();
