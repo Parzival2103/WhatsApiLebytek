@@ -37,9 +37,9 @@ class MessageSendService
             abort(404);
         }
 
-        if ($instancia->status !== 'authorized') {
-            $instancia = $this->stateSync->refreshFromGreen($instancia);
-        }
+        // Siempre revalidar contra Green antes de encolar: evita enviar (y contar cuota)
+        // cuando la BD aún dice `authorized` tras un logout / desautorización.
+        $instancia = $this->stateSync->refreshFromGreen($instancia);
 
         if ($instancia->status !== 'authorized') {
             abort(409, 'Instance not authorized for sending.');

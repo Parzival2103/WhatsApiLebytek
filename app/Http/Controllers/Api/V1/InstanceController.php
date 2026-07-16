@@ -70,9 +70,9 @@ class InstanceController extends Controller
         $tenantId = $this->resolveTenantAccess($request);
         $this->ensureInstanceBelongsToTenant($instancia, $tenantId);
 
-        if ($instancia->status !== 'authorized') {
-            $instancia = $this->stateSync->refreshFromGreen($instancia);
-        }
+        // Siempre sincronizar con Green: un logout manual deja `authorized` obsoleto en BD
+        // si el webhook no llegó, y el sandbox avanzaría sin QR real.
+        $instancia = $this->stateSync->refreshFromGreen($instancia);
 
         return new InstanceResource($instancia);
     }
@@ -84,6 +84,8 @@ class InstanceController extends Controller
     {
         $tenantId = $this->resolveTenantAccess($request);
         $this->ensureInstanceBelongsToTenant($instancia, $tenantId);
+
+        $instancia = $this->stateSync->refreshFromGreen($instancia);
 
         if ($instancia->status === 'authorized') {
             abort(409, 'Instance already authorized');
@@ -109,7 +111,16 @@ class InstanceController extends Controller
         $qrResult = $client->qr();
 
         if ($qrResult['type'] === 'alreadyLogged') {
+            $instancia->update([
+                'status' => 'authorized',
+                'green_state' => 'authorized',
+                'authorized_at' => $instancia->authorized_at ?? now(),
+            ]);
             abort(409, 'Instance already authorized');
+        }
+
+        if ($qrResult['type'] !== 'qrCode' || $qrResult['qr'] === '') {
+            abort(409, 'QR not available from provider');
         }
 
         $expiresAt = now()->addSeconds(20);
