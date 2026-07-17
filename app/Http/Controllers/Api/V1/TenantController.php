@@ -11,6 +11,8 @@ use App\Http\Resources\Api\V1\TenantResource;
 use App\Http\Resources\Api\V1\TenantTokenResource;
 use App\Models\Core\Tenant;
 use App\Services\ActivatePlanService;
+use App\Services\CancelCommercialService;
+use App\Services\ReactivateCommercialService;
 use App\Services\TenantProvisioningService;
 use App\Services\TenantTokenService;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +30,8 @@ class TenantController extends Controller
         private readonly TenantProvisioningService $provisioningService,
         private readonly TenantTokenService $tenantTokenService,
         private readonly ActivatePlanService $activatePlanService,
+        private readonly CancelCommercialService $cancelCommercialService,
+        private readonly ReactivateCommercialService $reactivateCommercialService,
     ) {}
 
     /**
@@ -127,6 +131,45 @@ class TenantController extends Controller
             'tenant' => (new TenantResource($result['tenant']))->resolve(),
             'token' => $result['token'],
             'plan' => $result['plan'],
+        ], $result['created'] ? 201 : 200);
+    }
+
+    /**
+     * Soft-cancel commercial access (platform only). Revokes client tokens; keeps tenant and instances.
+     */
+    public function cancelCommercial(Request $request, Tenant $tenant): JsonResponse
+    {
+        $this->ensurePlatformService($request);
+
+        $reason = $request->string('reason')->toString();
+        $result = $this->cancelCommercialService->cancel(
+            $tenant,
+            $reason !== '' ? $reason : null,
+        );
+
+        return response()->json([
+            'tenant' => (new TenantResource($result['tenant']))->resolve(),
+            'commercialStatus' => 'cancelled',
+            'tokensRevoked' => $result['tokensRevoked'],
+        ], $result['created'] ? 200 : 200);
+    }
+
+    /**
+     * Reactivate commercial access after soft-cancel (platform only). Issues a fresh client token.
+     */
+    public function reactivateCommercial(Request $request, Tenant $tenant): JsonResponse
+    {
+        $this->ensurePlatformService($request);
+
+        $tokenName = $request->string('tokenName')->toString();
+        $result = $this->reactivateCommercialService->reactivate($tenant, [
+            'tokenName' => $tokenName !== '' ? $tokenName : 'membresia-reactivated',
+        ]);
+
+        return response()->json([
+            'tenant' => (new TenantResource($result['tenant']))->resolve(),
+            'commercialStatus' => 'active',
+            'token' => $result['token'],
         ], $result['created'] ? 201 : 200);
     }
 
