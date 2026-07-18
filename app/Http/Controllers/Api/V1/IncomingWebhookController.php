@@ -3,71 +3,54 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Integration\Instancia;
+use App\Jobs\ProcessWebhookJob;
+use App\Models\Integration\Webhook;
+use App\Support\WebhookEventId;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
  * @group Webhooks
  *
- * Incoming webhook endpoints (HMAC signature or Bearer token + idempotency).
+ * Incoming webhook endpoint (HMAC signature or Bearer token).
+ *
+ * Every valid event is persisted to int_webhooks before processing. The
+ * event_id unique index is the deduplication authority; a collision returns
+ * 200 {duplicate:true}. Processing happens asynchronously in ProcessWebhookJob.
  */
 class IncomingWebhookController extends Controller
 {
-    /**
-     * Receive incoming webhook
-     *
-     * Accepts signed webhook payloads (HMAC `X-Webhook-Signature` or Green `Authorization: Bearer`).
-     * Green may omit `X-Event-Id`; idempotency falls back to payload-derived keys.
-     * Duplicate deliveries with the same idempotency key return 200 without reprocessing.
-     */
     public function __invoke(Request $request): JsonResponse
     {
         $payload = $request->all();
-        $typeWebhook = (string) ($payload['typeWebhook'] ?? '');
+        $eventId = sha1(WebhookEventId::resolve($request));
 
-        if ($typeWebhook === 'stateInstanceChanged') {
-            $this->handleStateInstanceChanged($payload);
+        $instanceData = is_array($payload['instanceData'] ?? null) ? $payload['instanceData'] : [];
+        $idInstance = $instanceData['idInstance'] ?? $payload['idInstance'] ?? null;
+
+        try {
+            $webhook = Webhook::query()->create([
+                'event_id' => $eventId,
+                'type_webhook' => (string) ($payload['typeWebhook'] ?? ''),
+                'id_instance' => $idInstance !== null ? (string) $idInstance : null,
+                'payload' => $payload,
+            ]);
+        } catch (QueryException $e) {
+            if ($this->isUniqueViolation($e)) {
+                return response()->json(['received' => true, 'duplicate' => true]);
+            }
+
+            throw $e;
         }
 
-        return response()->json([
-            'received' => true,
-            'duplicate' => false,
-        ]);
+        ProcessWebhookJob::dispatch($webhook->id);
+
+        return response()->json(['received' => true, 'duplicate' => false]);
     }
 
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    private function handleStateInstanceChanged(array $payload): void
+    private function isUniqueViolation(QueryException $e): bool
     {
-        $instanceData = $payload['instanceData'] ?? [];
-        $idInstance = (string) ($instanceData['idInstance'] ?? $payload['idInstance'] ?? '');
-        $state = (string) ($payload['stateInstance'] ?? '');
-
-        if ($idInstance === '' || $state === '') {
-            return;
-        }
-
-        $instancia = Instancia::query()
-            ->withoutGlobalScope('tenant')
-            ->where('id_instance', $idInstance)
-            ->first();
-
-        if ($instancia === null) {
-            return;
-        }
-
-        $attributes = ['green_state' => $state];
-
-        if ($state === 'authorized') {
-            $attributes['status'] = 'authorized';
-            $attributes['authorized_at'] = now();
-        } elseif ($state === 'notAuthorized' && $instancia->status === 'authorized') {
-            $attributes['status'] = 'waiting_qr';
-            $attributes['authorized_at'] = null;
-        }
-
-        $instancia->update($attributes);
+        return (string) $e->getCode() === '23000';
     }
 }

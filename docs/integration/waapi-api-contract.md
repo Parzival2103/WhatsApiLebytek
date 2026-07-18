@@ -513,7 +513,6 @@ Marcados para el vertical WhatsApp. waapi **no debe** implementar llamadas a est
 
 | Method | Path | Permiso (previsto) | Propósito |
 |--------|------|-------------------|-----------|
-| PUT | `/credentials/green-api` | `credenciales.gestionar` | Credenciales cifradas por tenant |
 | GET | `/campaigns` | `campanias.ver` | Listar campañas |
 | POST | `/campaigns` | `campanias.crear` | Crear campaña |
 | POST | `/campaigns/{publicId}/dispatch` | `campanias.enviar` | Despachar cola |
