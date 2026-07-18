@@ -7,13 +7,26 @@ use App\Models\Core\Tenant;
 use App\Models\Integration\Mensaje;
 use App\Support\PlanRateResolver;
 
-test('horizon defines isolated supervisors for default transactional and campaigns queues', function () {
+test('horizon defines isolated supervisors for default transactional webhooks and campaigns queues', function () {
     $defaults = config('horizon.defaults');
+    $environments = config('horizon.environments');
 
-    expect($defaults)->toHaveKeys(['supervisor-default', 'supervisor-transactional', 'supervisor-campaigns'])
+    expect($defaults)->toHaveKeys([
+        'supervisor-default',
+        'supervisor-transactional',
+        'supervisor-webhooks',
+        'supervisor-campaigns',
+    ])
         ->and($defaults['supervisor-default']['queue'])->toBe(['default'])
         ->and($defaults['supervisor-transactional']['queue'])->toBe(['transactional'])
-        ->and($defaults['supervisor-campaigns']['queue'])->toBe(['campaigns']);
+        ->and($defaults['supervisor-webhooks']['queue'])->toBe(['webhooks'])
+        ->and($defaults['supervisor-webhooks']['tries'])->toBe(5)
+        ->and($defaults['supervisor-webhooks']['timeout'])->toBe(90)
+        ->and($defaults['supervisor-campaigns']['queue'])->toBe(['campaigns'])
+        ->and(config('horizon.waits'))->toHaveKey('redis:webhooks')
+        ->and($environments['production'])->toHaveKey('supervisor-webhooks')
+        ->and($environments['local'])->toHaveKey('supervisor-webhooks')
+        ->and($environments['testing'])->toHaveKey('supervisor-webhooks');
 });
 
 test('stub jobs dispatch to the correct queues', function () {

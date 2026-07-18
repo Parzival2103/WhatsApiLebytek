@@ -72,7 +72,17 @@ stdout_logfile=/home/lebytek-api/htdocs/api.lebytek.com/storage/logs/horizon.log
 stopwaitsecs=3600
 ```
 
-Horizon gestiona las colas `default`, `transactional` y `campaigns` (Redis).
+Horizon gestiona las colas `default`, `transactional`, `webhooks`, `campaigns` y `provisioning` (Redis).
+
+### Scheduler (cron)
+
+Horizon no ejecuta el scheduler de Laravel. En el VPS debe existir un cron que invoque `schedule:run` cada minuto:
+
+```cron
+* * * * * cd /home/lebytek-api/htdocs/api.lebytek.com && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Eso dispara, entre otros, `webhooks:check-unprocessed` cada 5 minutos (backlog watcher de webhooks sin procesar).
 
 ---
 

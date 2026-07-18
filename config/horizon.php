@@ -100,6 +100,7 @@ return [
         'redis:default' => 60,
         'redis:transactional' => 30,
         'redis:campaigns' => 120,
+        'redis:webhooks' => 60,
     ],
 
     /*
@@ -225,6 +226,19 @@ return [
             'timeout' => 90,
             'nice' => 0,
         ],
+        'supervisor-webhooks' => [
+            'connection' => 'redis',
+            'queue' => ['webhooks'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 5,
+            'timeout' => 90,
+            'nice' => 0,
+        ],
         'supervisor-campaigns' => [
             'connection' => 'redis',
             'queue' => ['campaigns'],
@@ -264,6 +278,11 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-webhooks' => [
+                'maxProcesses' => 4,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
             'supervisor-campaigns' => [
                 'maxProcesses' => 4,
                 'balanceMaxShift' => 1,
@@ -278,6 +297,9 @@ return [
             'supervisor-transactional' => [
                 'maxProcesses' => 2,
             ],
+            'supervisor-webhooks' => [
+                'maxProcesses' => 2,
+            ],
             'supervisor-campaigns' => [
                 'maxProcesses' => 1,
             ],
@@ -288,6 +310,9 @@ return [
                 'maxProcesses' => 1,
             ],
             'supervisor-transactional' => [
+                'maxProcesses' => 1,
+            ],
+            'supervisor-webhooks' => [
                 'maxProcesses' => 1,
             ],
             'supervisor-campaigns' => [
