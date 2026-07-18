@@ -31,7 +31,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'ensure.api.permission' => \App\Http\Middleware\EnsureApiPermission::class,
             'webhook.signature' => \App\Http\Middleware\VerifyWebhookSignature::class,
-            'webhook.idempotency' => \App\Http\Middleware\WebhookIdempotency::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'api.idempotency' => \App\Http\Middleware\ApiIdempotencyKey::class,
             'track.tenant.activity' => \App\Http\Middleware\TrackTenantActivity::class,

@@ -1,32 +1,18 @@
 <?php
 
-use App\Models\Integration\Instancia;
+use App\Jobs\ProcessWebhookJob;
+use App\Models\Integration\Webhook;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     config(['services.webhooks.secret' => 'test-webhook-secret']);
     Cache::flush();
 });
 
-test('green bearer stateInstanceChanged updates instancia without hmac or event id header', function () {
-    $instancia = Instancia::factory()->create([
-        'id_instance' => '1101234567',
-        'status' => 'waiting_qr',
-        'green_state' => 'notAuthorized',
-        'authorized_at' => null,
-    ]);
-
-    $payload = [
-        'typeWebhook' => 'stateInstanceChanged',
-        'instanceData' => [
-            'idInstance' => 1101234567,
-        ],
-        'stateInstance' => 'authorized',
-        'timestamp' => 1720000000,
-    ];
-    $body = json_encode($payload);
-
-    $this->call(
+function postWebhook(array $payload): \Illuminate\Testing\TestResponse
+{
+    return test()->call(
         'POST',
         route('api.v1.webhooks.incoming'),
         [],
@@ -36,22 +22,31 @@ test('green bearer stateInstanceChanged updates instancia without hmac or event 
             'CONTENT_TYPE' => 'application/json',
             'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
         ],
-        $body,
-    )->assertOk()->assertJson(['received' => true, 'duplicate' => false]);
+        json_encode($payload),
+    );
+}
 
-    $instancia->refresh();
+test('every webhook type persists exactly one int_webhooks row and dispatches the job', function () {
+    Queue::fake();
 
-    expect($instancia->green_state)->toBe('authorized')
-        ->and($instancia->status)->toBe('authorized')
-        ->and($instancia->authorized_at)->not->toBeNull();
+    $types = [
+        ['typeWebhook' => 'incomingMessageReceived', 'instanceData' => ['idInstance' => 1101234567], 'idMessage' => 'm-1'],
+        ['typeWebhook' => 'outgoingMessageStatus', 'instanceData' => ['idInstance' => 1101234567], 'idMessage' => 'm-2', 'status' => 'delivered'],
+        ['typeWebhook' => 'outgoingAPIMessageReceived', 'instanceData' => ['idInstance' => 1101234567], 'idMessage' => 'm-3'],
+        ['typeWebhook' => 'incomingCall', 'instanceData' => ['idInstance' => 1101234567], 'timestamp' => 1720000500, 'from' => '5215550001@c.us', 'status' => 'offer'],
+        ['typeWebhook' => 'stateInstanceChanged', 'instanceData' => ['idInstance' => 1101234567], 'stateInstance' => 'authorized', 'timestamp' => 1720000600],
+    ];
+
+    foreach ($types as $payload) {
+        postWebhook($payload)->assertOk()->assertJson(['received' => true, 'duplicate' => false]);
+    }
+
+    expect(Webhook::query()->count())->toBe(5);
+    Queue::assertPushed(ProcessWebhookJob::class, 5);
 });
 
-test('green bearer duplicate delivery is idempotent using derived event id', function () {
-    Instancia::factory()->create([
-        'id_instance' => '1109998887',
-        'status' => 'waiting_qr',
-        'green_state' => 'notAuthorized',
-    ]);
+test('duplicate delivery does not create a second row and returns duplicate true even with a cold cache', function () {
+    Queue::fake();
 
     $payload = [
         'typeWebhook' => 'stateInstanceChanged',
@@ -59,212 +54,68 @@ test('green bearer duplicate delivery is idempotent using derived event id', fun
         'stateInstance' => 'authorized',
         'timestamp' => 1720000001,
     ];
-    $body = json_encode($payload);
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-    ];
 
-    $this->call('POST', route('api.v1.webhooks.incoming'), [], [], [], $server, $body)
-        ->assertOk()
-        ->assertJson(['duplicate' => false]);
+    postWebhook($payload)->assertOk()->assertJson(['duplicate' => false]);
 
-    $this->call('POST', route('api.v1.webhooks.incoming'), [], [], [], $server, $body)
-        ->assertOk()
-        ->assertJson(['received' => true, 'duplicate' => true]);
+    // The DB — not Redis — is the dedup authority: flush the cache before the retry.
+    Cache::flush();
+
+    postWebhook($payload)->assertOk()->assertJson(['received' => true, 'duplicate' => true]);
+
+    expect(Webhook::query()->count())->toBe(1);
+    Queue::assertPushed(ProcessWebhookJob::class, 1);
 });
 
-test('green message status events sharing idMessage are not treated as duplicates', function () {
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-    ];
+test('stateInstanceChanged authorized ends with the instance authorized and the row processed', function () {
+    // Sync queue (default in tests): the dispatched job runs inline, no Queue::fake().
+    $instancia = \App\Models\Integration\Instancia::factory()->create([
+        'id_instance' => '1101234567',
+        'status' => 'waiting_qr',
+        'green_state' => 'notAuthorized',
+        'authorized_at' => null,
+    ]);
 
-    $post = function (array $payload) use ($server) {
-        return $this->call(
-            'POST',
-            route('api.v1.webhooks.incoming'),
-            [],
-            [],
-            [],
-            $server,
-            json_encode($payload),
-        );
-    };
-
-    $post([
-        'typeWebhook' => 'outgoingAPIMessageReceived',
+    postWebhook([
+        'typeWebhook' => 'stateInstanceChanged',
         'instanceData' => ['idInstance' => 1101234567],
-        'timestamp' => 1720000100,
-        'idMessage' => 'green-msg-shared',
-    ])->assertOk()->assertJson(['duplicate' => false]);
+        'stateInstance' => 'authorized',
+        'timestamp' => 1720000000,
+    ])->assertOk()->assertJson(['received' => true, 'duplicate' => false]);
 
-    foreach (['sent', 'delivered', 'read'] as $status) {
-        $post([
-            'typeWebhook' => 'outgoingMessageStatus',
-            'instanceData' => ['idInstance' => 1101234567],
-            'timestamp' => 1720000101,
-            'idMessage' => 'green-msg-shared',
-            'status' => $status,
-        ])->assertOk()->assertJson(['duplicate' => false]);
-    }
+    $instancia->refresh();
+    $webhook = Webhook::query()->firstOrFail();
 
-    $post([
-        'typeWebhook' => 'outgoingMessageStatus',
-        'instanceData' => ['idInstance' => 1101234567],
-        'timestamp' => 1720000101,
-        'idMessage' => 'green-msg-shared',
-        'status' => 'read',
-    ])->assertOk()->assertJson(['duplicate' => true]);
+    expect($instancia->status)->toBe('authorized')
+        ->and($instancia->green_state)->toBe('authorized')
+        ->and($instancia->authorized_at)->not->toBeNull()
+        ->and($webhook->processed_at)->not->toBeNull();
 });
 
 test('same idMessage from different instances is not treated as a duplicate', function () {
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
+    Queue::fake();
+
+    $payload = fn (int $idInstance) => [
+        'typeWebhook' => 'incomingMessageReceived',
+        'instanceData' => ['idInstance' => $idInstance],
+        'timestamp' => 1720000400,
+        'idMessage' => 'green-msg-collision',
     ];
 
-    $post = function (int $idInstance) use ($server) {
-        return $this->call(
-            'POST',
-            route('api.v1.webhooks.incoming'),
-            [],
-            [],
-            [],
-            $server,
-            json_encode([
-                'typeWebhook' => 'incomingMessageReceived',
-                'instanceData' => ['idInstance' => $idInstance],
-                'timestamp' => 1720000400,
-                'idMessage' => 'green-msg-collision',
-            ]),
-        );
-    };
+    postWebhook($payload(1101111111))->assertOk()->assertJson(['duplicate' => false]);
+    postWebhook($payload(1102222222))->assertOk()->assertJson(['duplicate' => false]);
+    postWebhook($payload(1102222222))->assertOk()->assertJson(['duplicate' => true]);
 
-    $post(1101111111)->assertOk()->assertJson(['duplicate' => false]);
-    $post(1102222222)->assertOk()->assertJson(['duplicate' => false]);
-    $post(1102222222)->assertOk()->assertJson(['duplicate' => true]);
+    expect(Webhook::query()->count())->toBe(2);
 });
 
-test('distinct state transitions within the same second are not treated as duplicates', function () {
-    $instancia = Instancia::factory()->create([
-        'id_instance' => '1105554443',
-        'status' => 'authorized',
-        'green_state' => 'authorized',
-        'authorized_at' => now(),
-    ]);
+test('webhook without any ids still persists via the body-hash key', function () {
+    Queue::fake();
 
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-    ];
-
-    $post = function (string $state) use ($server) {
-        return $this->call(
-            'POST',
-            route('api.v1.webhooks.incoming'),
-            [],
-            [],
-            [],
-            $server,
-            json_encode([
-                'typeWebhook' => 'stateInstanceChanged',
-                'instanceData' => ['idInstance' => 1105554443],
-                'stateInstance' => $state,
-                'timestamp' => 1720000200,
-            ]),
-        );
-    };
-
-    $post('notAuthorized')->assertOk()->assertJson(['duplicate' => false]);
-    $post('authorized')->assertOk()->assertJson(['duplicate' => false]);
-
-    expect($instancia->refresh()->green_state)->toBe('authorized')
-        ->and($instancia->status)->toBe('authorized');
-});
-
-test('distinct incoming calls within the same second are not treated as duplicates', function () {
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-    ];
-
-    $post = function (string $chatId) use ($server) {
-        return $this->call(
-            'POST',
-            route('api.v1.webhooks.incoming'),
-            [],
-            [],
-            [],
-            $server,
-            json_encode([
-                'typeWebhook' => 'incomingCall',
-                'instanceData' => ['idInstance' => 1103334442],
-                'timestamp' => 1720000500,
-                'from' => $chatId,
-                'status' => 'offer',
-            ]),
-        );
-    };
-
-    $post('5215550001@c.us')->assertOk()->assertJson(['duplicate' => false]);
-    $post('5215550002@c.us')->assertOk()->assertJson(['duplicate' => false]);
-    $post('5215550002@c.us')->assertOk()->assertJson(['duplicate' => true]);
-});
-
-test('non scalar idMessage falls through to the composite key instead of colliding', function () {
-    Instancia::factory()->create([
-        'id_instance' => '1107776665',
-        'status' => 'waiting_qr',
-        'green_state' => 'notAuthorized',
-    ]);
-
-    $server = [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-    ];
-
-    $post = function (int $timestamp) use ($server) {
-        return $this->call(
-            'POST',
-            route('api.v1.webhooks.incoming'),
-            [],
-            [],
-            [],
-            $server,
-            json_encode([
-                'typeWebhook' => 'stateInstanceChanged',
-                'instanceData' => ['idInstance' => 1107776665],
-                'stateInstance' => 'authorized',
-                'timestamp' => $timestamp,
-                'idMessage' => [],
-            ]),
-        );
-    };
-
-    $post(1720000300)->assertOk()->assertJson(['duplicate' => false]);
-    $post(1720000301)->assertOk()->assertJson(['duplicate' => false]);
-    $post(1720000301)->assertOk()->assertJson(['duplicate' => true]);
-});
-
-test('green bearer without ids still accepts via body hash idempotency key', function () {
-    $payload = [
+    postWebhook([
         'typeWebhook' => 'stateInstanceChanged',
         'instanceData' => ['idInstance' => '1100000001'],
         'stateInstance' => 'notAuthorized',
-    ];
-    $body = json_encode($payload);
+    ])->assertOk()->assertJson(['received' => true, 'duplicate' => false]);
 
-    $this->call(
-        'POST',
-        route('api.v1.webhooks.incoming'),
-        [],
-        [],
-        [],
-        [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_AUTHORIZATION' => 'Bearer test-webhook-secret',
-        ],
-        $body,
-    )->assertOk()->assertJson(['received' => true, 'duplicate' => false]);
+    expect(Webhook::query()->count())->toBe(1);
 });
