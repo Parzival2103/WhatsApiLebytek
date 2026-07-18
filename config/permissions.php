@@ -22,7 +22,6 @@ return [
         'mensajes.enviar',
         'mensajes.ver',
         'cuenta.ver',
-        'credenciales.gestionar',
     ],
 
     /*
@@ -41,7 +40,6 @@ return [
         'mensajes.enviar',
         'mensajes.ver',
         'cuenta.ver',
-        'credenciales.gestionar',
     ],
 
     /*
