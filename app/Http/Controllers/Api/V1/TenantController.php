@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ActivatePlanRequest;
+use App\Http\Requests\Api\V1\CancelCommercialRequest;
+use App\Http\Requests\Api\V1\ReactivateCommercialRequest;
 use App\Http\Requests\Api\V1\StoreTenantRequest;
 use App\Http\Requests\Api\V1\StoreTenantTokenRequest;
 use App\Http\Requests\Api\V1\UpdateTenantRequest;
@@ -137,33 +139,33 @@ class TenantController extends Controller
     /**
      * Soft-cancel commercial access (platform only). Revokes client tokens; keeps tenant and instances.
      */
-    public function cancelCommercial(Request $request, Tenant $tenant): JsonResponse
+    public function cancelCommercial(CancelCommercialRequest $request, Tenant $tenant): JsonResponse
     {
         $this->ensurePlatformService($request);
 
-        $reason = $request->string('reason')->toString();
+        $reason = $request->validated('reason');
         $result = $this->cancelCommercialService->cancel(
             $tenant,
-            $reason !== '' ? $reason : null,
+            is_string($reason) && $reason !== '' ? $reason : null,
         );
 
         return response()->json([
             'tenant' => (new TenantResource($result['tenant']))->resolve(),
             'commercialStatus' => 'cancelled',
             'tokensRevoked' => $result['tokensRevoked'],
-        ], $result['created'] ? 200 : 200);
+        ], 200);
     }
 
     /**
      * Reactivate commercial access after soft-cancel (platform only). Issues a fresh client token.
      */
-    public function reactivateCommercial(Request $request, Tenant $tenant): JsonResponse
+    public function reactivateCommercial(ReactivateCommercialRequest $request, Tenant $tenant): JsonResponse
     {
         $this->ensurePlatformService($request);
 
-        $tokenName = $request->string('tokenName')->toString();
+        $tokenName = $request->validated('tokenName');
         $result = $this->reactivateCommercialService->reactivate($tenant, [
-            'tokenName' => $tokenName !== '' ? $tokenName : 'membresia-reactivated',
+            'tokenName' => is_string($tokenName) && $tokenName !== '' ? $tokenName : 'membresia-reactivated',
         ]);
 
         return response()->json([
