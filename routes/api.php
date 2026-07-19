@@ -92,6 +92,6 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
         ->name('api.v1.account.status');
 });
 
-Route::prefix('v1/webhooks')->middleware(['webhook.signature'])->group(function (): void {
+Route::prefix('v1/webhooks')->middleware(['webhook.signature', 'throttle:webhooks'])->group(function (): void {
     Route::post('/incoming', IncomingWebhookController::class)->name('api.v1.webhooks.incoming');
 });
