@@ -19,12 +19,12 @@ class UpdateTenantRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'isActive' => ['sometimes', 'boolean'],
-            'commercialStatus' => ['sometimes', 'string', 'in:demo,active,past_due,cancelled'],
-            'planSlug' => ['sometimes', 'string', 'max:50'],
-            'planName' => ['sometimes', 'string', 'max:150'],
-            'demoStartedAt' => ['sometimes', 'date'],
-            'demoExpiresAt' => ['sometimes', 'date'],
-            'messagesMonthlyLimit' => ['sometimes', 'integer', 'min:0'],
+            'commercialStatus' => ['prohibited'],
+            'planSlug' => ['prohibited'],
+            'planName' => ['prohibited'],
+            'demoStartedAt' => ['prohibited'],
+            'demoExpiresAt' => ['prohibited'],
+            'messagesMonthlyLimit' => ['prohibited'],
         ];
     }
 }
