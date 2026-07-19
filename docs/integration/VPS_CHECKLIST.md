@@ -104,6 +104,18 @@ Ejecutar UNA sola vez en prod/staging VPS. Hard-gate: pasos 4, 5 y 6 deben ser �
 
 ## api.lebytek.com
 
+### A-001 deploy evidence (2026-07-19) — Issue #17
+
+- HEAD: `9e62475` (main = origin/main)
+- `git pull` + `composer install --no-dev` + `npm ci` + `npm run build` + caches + `scribe:generate`: OK
+- `php artisan migrate --force`: Nothing to migrate
+- Horizon: restarted (`lebytek-api-horizon` RUNNING); `supervisor-webhooks` / queue `webhooks` present in `config/horizon.php`
+- cron `* * * * * … php artisan schedule:run` installed for user `lebytek-api` (was missing; deploy-api.sh every 3 min retained)
+- `php artisan schedule:list`: `webhooks:check-unprocessed` every 5 min
+- smoke: `https://api.lebytek.com/up` → 200
+- Commercial activate-plan E2E: deferred to human (no platform token in agent session)
+
+
 Ruta: `/home/lebytek-api/htdocs/api.lebytek.com`  
 Usuario CloudPanel: `lebytek-api`
 
@@ -111,9 +123,9 @@ Usuario CloudPanel: `lebytek-api`
 
 - [ ] `ssh lebytek-vps` funciona sin contraseña
 - [ ] `git remote -v` apunta a `https://github.com/Parzival2103/WhatsApiLebytek.git`
-- [x] `git pull origin main` sin conflictos (2026-07-04, HEAD a454121 ≥ dcc46d0)
-- [x] `composer install --no-dev` OK (2026-07-04)
-- [ ] `npm ci && npm run build` OK
+- [x] `git pull origin main` sin conflictos (2026-07-19, HEAD `9e62475` = origin/main; prev 2026-07-04 a454121)
+- [x] `composer install --no-dev` OK (2026-07-19; prev 2026-07-04)
+- [x] `npm ci && npm run build` OK (2026-07-19)
 
 ### Entorno
 
@@ -127,14 +139,14 @@ Usuario CloudPanel: `lebytek-api`
 
 ### Migraciones y token plataforma
 
-- [x] `php artisan migrate --force` (2026-07-04, Nothing to migrate — int_mensajes ya aplicadas)
+- [x] `php artisan migrate --force` (2026-07-19, Nothing to migrate — meta + int_mensajes ya aplicadas; prev 2026-07-04)
 - [ ] `php artisan integration:issue-waapi-token --revoke` → token copiado a **lebytek.com** `.env` (`LEBYTEK_API_TOKEN` — consumidor primario)
 - [ ] waapi.lebytek.com mantiene copia legacy del token para fase panel (no orquestador)
 
 ### Servicios
 
-- [x] `supervisorctl status lebytek-api-horizon` → RUNNING (2026-07-04)
-- [x] `php artisan horizon:status` → running (2026-07-04)
+- [x] `supervisorctl status lebytek-api-horizon` — RUNNING (2026-07-19; prev 2026-07-04)
+- [x] `php artisan horizon:status` — running (2026-07-19; `supervisor-webhooks` / queue `webhooks` en config/horizon.php; prev 2026-07-04)
 
 ### Smoke tests
 
@@ -145,7 +157,7 @@ curl -sfI https://api.lebytek.com/admin/login | head -1
 curl -sf -H "Authorization: Bearer <token>" https://api.lebytek.com/api/v1/health
 ```
 
-- [x] `/up` → 200 (2026-07-04)
+- [x] `/up` — 200 (2026-07-19; prev 2026-07-04)
 - [ ] `/admin/login` accesible
 - [x] `/api/v1/health` con token → 200, `checks.database.ok` y `checks.redis.ok` (2026-07-04)
 - [ ] Horizon accesible para email en `HORIZON_ALLOWED_EMAILS`
