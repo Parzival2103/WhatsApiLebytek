@@ -20,22 +20,42 @@ class PartnerClient
         $token = $this->requirePartnerToken();
         $url = rtrim($this->baseUrl, '/')."/partner/createInstance/{$token}";
 
-        $response = Http::timeout(30)->post($url, ['name' => $label]);
+        $response = Http::timeout(30)->asJson()->post($url, ['name' => $label]);
+
+        /** @var array<string, mixed>|null $json */
+        $json = $response->json();
+        if (! is_array($json)) {
+            $json = null;
+        }
 
         if (! $response->successful()) {
             throw new GreenApiException(
                 'Partner createInstance failed: '.$response->body(),
                 $response->status(),
-                $response->json(),
+                $json,
             );
         }
 
-        $json = $response->json();
+        // Green Partner often returns HTTP 200 with {code, description} on failure.
+        if (is_array($json) && array_key_exists('code', $json)) {
+            $description = (string) ($json['description'] ?? 'Green partner error');
+
+            throw new GreenApiException(
+                'Partner createInstance failed: '.$description,
+                (int) $json['code'],
+                $json,
+            );
+        }
+
         $idInstance = (string) ($json['idInstance'] ?? '');
         $apiTokenInstance = (string) ($json['apiTokenInstance'] ?? '');
 
         if ($idInstance === '' || $apiTokenInstance === '') {
-            throw new GreenApiException('Partner createInstance returned incomplete credentials.');
+            throw new GreenApiException(
+                'Partner createInstance returned incomplete credentials: '.$response->body(),
+                $response->status(),
+                $json,
+            );
         }
 
         return [
