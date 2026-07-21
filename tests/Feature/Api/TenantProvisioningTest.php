@@ -35,6 +35,36 @@ test('platform service can provision tenant', function () {
     expect(Module::query()->where('tenant_id', $tenant->id)->count())->toBeGreaterThan(0);
 });
 
+test('platform provision seeds demo commercial fields from plans catalog', function () {
+    $token = platformServiceToken();
+    $demoDays = (int) config('plans.demo_days', 30);
+    $demoLimit = (int) config('plans.catalog.demo.messages_monthly_limit');
+
+    $this->withToken($token)
+        ->postJson(route('api.v1.tenants.store'), [
+            'name' => 'Demo Seed Corp',
+            'slug' => 'demo-seed-corp',
+            'externalRef' => 'waapi_demo_seed_1',
+        ], idempotencyHeaders())
+        ->assertCreated()
+        ->assertJsonPath('commercialStatus', 'demo')
+        ->assertJsonPath('planSlug', 'demo')
+        ->assertJsonPath('planName', 'Demo')
+        ->assertJsonPath('messagesMonthlyLimit', $demoLimit)
+        ->assertJsonPath('demoStartedAt', fn ($value) => is_string($value) && $value !== '')
+        ->assertJsonPath('demoExpiresAt', fn ($value) => is_string($value) && $value !== '');
+
+    $tenant = Tenant::query()->where('slug', 'demo-seed-corp')->firstOrFail();
+
+    expect($tenant->commercial_status)->toBe('demo')
+        ->and($tenant->plan_slug)->toBe('demo')
+        ->and($tenant->plan_name)->toBe('Demo')
+        ->and($tenant->messages_monthly_limit)->toBe($demoLimit)
+        ->and($tenant->demo_started_at)->not->toBeNull()
+        ->and($tenant->demo_expires_at)->not->toBeNull()
+        ->and((int) $tenant->demo_started_at->diffInDays($tenant->demo_expires_at))->toBe($demoDays);
+});
+
 test('tenant provisioning is idempotent by external ref', function () {
     $token = platformServiceToken();
 

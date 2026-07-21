@@ -2,6 +2,7 @@
 
 return [
     'default_slug' => 'demo',
+    'demo_days' => 30,
 
     'empresa' => [
         'messages_monthly_limit_min' => 1000,

@@ -171,6 +171,8 @@ Cuerpo típico 422:
 
 **Idempotencia por `externalRef`:** si ya existe un tenant con el mismo `externalRef`, devuelve `200` con el tenant existente (no crea duplicado). Creación nueva → `201`.
 
+Creación nueva **siembra el plan demo** desde `config/plans.php` (`commercialStatus=demo`, `planSlug`/`planName`, `demoStartedAt`/`demoExpiresAt` según `plans.demo_days`, `messagesMonthlyLimit` del catálogo). No usar `PATCH /tenants` para campos comerciales (prohibidos; mutaciones vía `activate-plan` / `cancel-commercial` / `reactivate-commercial`).
+
 **Respuesta (TenantResource):**
 
 ```json
@@ -180,8 +182,14 @@ Cuerpo típico 422:
   "slug": "acme-corp",
   "externalRef": "lebytek_lead_42",
   "isActive": true,
-  "createdAt": "2026-06-29T12:00:00+00:00",
-  "updatedAt": "2026-06-29T12:00:00+00:00"
+  "commercialStatus": "demo",
+  "planSlug": "demo",
+  "planName": "Demo",
+  "demoStartedAt": "2026-07-21T12:00:00+00:00",
+  "demoExpiresAt": "2026-08-20T12:00:00+00:00",
+  "messagesMonthlyLimit": 100,
+  "createdAt": "2026-07-21T12:00:00+00:00",
+  "updatedAt": "2026-07-21T12:00:00+00:00"
 }
 ```
 
