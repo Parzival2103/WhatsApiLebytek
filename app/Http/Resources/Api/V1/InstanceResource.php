@@ -21,6 +21,7 @@ class InstanceResource extends ApiResource
             'status' => $this->status,
             'greenState' => $this->green_state,
             'idInstance' => $this->id_instance,
+            'lastError' => $this->last_error,
             'authorizedAt' => $this->authorized_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
