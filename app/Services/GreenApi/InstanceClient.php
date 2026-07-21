@@ -59,11 +59,11 @@ class InstanceClient
     public function setSettings(array $settings): void
     {
         $url = $this->instanceUrl('setSettings');
-        $response = Http::timeout(15)->post($url, $settings);
+        $response = Http::timeout(15)->asJson()->post($url, $settings);
 
         if (! $response->successful()) {
             throw new GreenApiException(
-                'setSettings failed: '.$response->body(),
+                'setSettings failed (HTTP '.$response->status().'): '.$response->body(),
                 $response->status(),
                 $response->json(),
             );

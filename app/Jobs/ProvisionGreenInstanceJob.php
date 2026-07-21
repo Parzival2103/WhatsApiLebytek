@@ -46,23 +46,35 @@ class ProvisionGreenInstanceJob implements ShouldQueue
             return;
         }
 
-        if ($instancia->id_instance !== null) {
-            return;
-        }
-
         try {
-            $credentials = $partnerClient->createInstance($instancia->label);
+            $idInstance = $instancia->id_instance !== null ? (string) $instancia->id_instance : '';
+            $apiTokenInstance = filled($instancia->api_token_instance)
+                ? (string) $instancia->api_token_instance
+                : '';
 
-            $instancia->update([
-                'id_instance' => $credentials['idInstance'],
-                'api_token_instance' => $credentials['apiTokenInstance'],
-                'status' => 'configuring',
-            ]);
+            if ($idInstance === '' || $apiTokenInstance === '') {
+                $credentials = $partnerClient->createInstance($instancia->label);
+
+                $instancia->update([
+                    'id_instance' => $credentials['idInstance'],
+                    'api_token_instance' => $credentials['apiTokenInstance'],
+                    'status' => 'configuring',
+                    'last_error' => null,
+                ]);
+
+                $idInstance = $credentials['idInstance'];
+                $apiTokenInstance = $credentials['apiTokenInstance'];
+            } elseif ($instancia->status !== 'configuring') {
+                $instancia->update([
+                    'status' => 'configuring',
+                    'last_error' => null,
+                ]);
+            }
 
             $client = new InstanceClient(
                 (string) config('services.green_api.base_url'),
-                $credentials['idInstance'],
-                $credentials['apiTokenInstance'],
+                $idInstance,
+                $apiTokenInstance,
             );
 
             $client->setSettings([
@@ -78,6 +90,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
             $instancia->update([
                 'green_state' => $greenState,
                 'status' => $status,
+                'last_error' => null,
                 'authorized_at' => $status === 'authorized' ? now() : null,
             ]);
         } catch (GreenApiException $e) {
