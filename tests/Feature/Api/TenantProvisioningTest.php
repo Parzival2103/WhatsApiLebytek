@@ -86,6 +86,37 @@ test('tenant provisioning is idempotent by external ref', function () {
     expect(Tenant::query()->where('external_ref', 'waapi_org_1001')->count())->toBe(1);
 });
 
+test('idempotent provision backfills missing demo commercial fields', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'name' => 'Partial Demo',
+        'slug' => 'partial-demo',
+        'external_ref' => 'waapi_partial_demo_1',
+        'commercial_status' => 'demo',
+        'plan_slug' => null,
+        'plan_name' => null,
+        'demo_started_at' => null,
+        'demo_expires_at' => null,
+        'messages_monthly_limit' => null,
+    ]);
+
+    $this->withToken($token)
+        ->postJson(route('api.v1.tenants.store'), [
+            'name' => 'Partial Demo',
+            'slug' => 'partial-demo',
+            'externalRef' => 'waapi_partial_demo_1',
+        ], idempotencyHeaders())
+        ->assertOk()
+        ->assertJsonPath('publicId', $tenant->public_id)
+        ->assertJsonPath('planSlug', 'demo')
+        ->assertJsonPath('messagesMonthlyLimit', 100);
+
+    $tenant->refresh();
+    expect($tenant->plan_slug)->toBe('demo')
+        ->and($tenant->demo_started_at)->not->toBeNull()
+        ->and($tenant->demo_expires_at)->not->toBeNull();
+});
+
 test('tenant user without platform permissions cannot provision tenant', function () {
     $tenant = Tenant::factory()->create();
     $user = User::factory()->forTenant($tenant)->create();

@@ -26,27 +26,20 @@ class TenantProvisioningService
             $existing = Tenant::query()->where('external_ref', $externalRef)->first();
 
             if ($existing !== null) {
-                return ['tenant' => $existing, 'created' => false];
+                return [
+                    'tenant' => $this->ensureDemoCommercialDefaults($existing),
+                    'created' => false,
+                ];
             }
         }
 
         $tenant = DB::transaction(function () use ($data, $externalRef): Tenant {
-            $demoSlug = (string) config('plans.default_slug', 'demo');
-            $demoPlan = config('plans.catalog.'.$demoSlug, []);
-            $demoDays = max(1, (int) config('plans.demo_days', 30));
-            $now = now();
-
             $tenant = Tenant::query()->create([
                 'name' => $data['name'],
                 'slug' => $data['slug'],
                 'external_ref' => $externalRef,
                 'is_active' => true,
-                'commercial_status' => 'demo',
-                'plan_slug' => $demoSlug,
-                'plan_name' => (string) ($demoPlan['name'] ?? 'Demo'),
-                'demo_started_at' => $now,
-                'demo_expires_at' => $now->copy()->addDays($demoDays),
-                'messages_monthly_limit' => (int) ($demoPlan['messages_monthly_limit'] ?? 100),
+                ...$this->demoCommercialAttributes(),
             ]);
 
             $this->coreSeeder->seedModulesAndMenu($tenant);
@@ -60,6 +53,48 @@ class TenantProvisioningService
         });
 
         return ['tenant' => $tenant, 'created' => true];
+    }
+
+    /**
+     * @return array{
+     *     commercial_status: string,
+     *     plan_slug: string,
+     *     plan_name: string,
+     *     demo_started_at: \Illuminate\Support\Carbon,
+     *     demo_expires_at: \Illuminate\Support\Carbon,
+     *     messages_monthly_limit: int,
+     * }
+     */
+    private function demoCommercialAttributes(): array
+    {
+        $demoSlug = (string) config('plans.default_slug', 'demo');
+        $demoPlan = config('plans.catalog.'.$demoSlug, []);
+        $demoDays = max(1, (int) config('plans.demo_days', 30));
+        $now = now();
+
+        return [
+            'commercial_status' => 'demo',
+            'plan_slug' => $demoSlug,
+            'plan_name' => (string) ($demoPlan['name'] ?? 'Demo'),
+            'demo_started_at' => $now,
+            'demo_expires_at' => $now->copy()->addDays($demoDays),
+            'messages_monthly_limit' => (int) ($demoPlan['messages_monthly_limit'] ?? 100),
+        ];
+    }
+
+    private function ensureDemoCommercialDefaults(Tenant $tenant): Tenant
+    {
+        if ($tenant->plan_slug !== null && $tenant->plan_slug !== '') {
+            return $tenant;
+        }
+
+        if ($tenant->commercial_status !== null && $tenant->commercial_status !== 'demo') {
+            return $tenant;
+        }
+
+        $tenant->update($this->demoCommercialAttributes());
+
+        return $tenant->fresh();
     }
 
     /**
