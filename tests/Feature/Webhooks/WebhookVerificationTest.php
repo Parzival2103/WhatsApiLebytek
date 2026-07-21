@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 beforeEach(function () {
     config(['services.webhooks.secret' => 'test-webhook-secret']);
@@ -153,4 +156,33 @@ test('webhook returns 500 when secret is not configured', function () {
         'X-Event-Id' => 'evt-no-secret',
         'Authorization' => 'Bearer anything',
     ])->assertStatus(500);
+});
+
+test('incoming webhook is rate limited per IP', function () {
+    $payload = ['event' => 'message.received'];
+    $body = json_encode($payload);
+    $signature = hash_hmac('sha256', $body, 'test-webhook-secret');
+
+    $hit = function (string $eventId) use ($body, $signature) {
+        return $this->call(
+            'POST',
+            route('api.v1.webhooks.incoming'),
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X-Event-Id' => $eventId,
+                'HTTP_X-Webhook-Signature' => $signature,
+                'REMOTE_ADDR' => '203.0.113.50',
+            ],
+            $body,
+        );
+    };
+
+    RateLimiter::for('webhooks', fn (Request $request) => Limit::perMinute(2)->by($request->ip()));
+
+    $hit('evt-rl-1')->assertSuccessful();
+    $hit('evt-rl-2')->assertSuccessful();
+    $hit('evt-rl-3')->assertStatus(429);
 });

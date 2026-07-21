@@ -84,3 +84,60 @@ test('reactivate-commercial restores active and issues a new token', function ()
         ->assertOk()
         ->assertJsonPath('commercialStatus', 'active');
 });
+
+test('cancel-commercial is idempotent when already cancelled', function () {
+    $platformToken = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'slug' => 'feat-cancel-idempotent',
+        'commercial_status' => 'cancelled',
+        'plan_slug' => 'starter',
+        'meta' => [
+            'cancelled_at' => now()->subHour()->toIso8601String(),
+            'cancel_reason' => 'already',
+        ],
+    ]);
+
+    $response = $this->withToken($platformToken)
+        ->postJson(route('api.v1.tenants.cancel-commercial', $tenant->public_id), [
+            'reason' => 'retry',
+        ], idempotencyHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('commercialStatus', 'cancelled')
+        ->assertJsonPath('tokensRevoked', 0);
+});
+
+test('reactivate-commercial on already active tenant returns 200 and null token', function () {
+    $platformToken = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'slug' => 'feat-reactivate-already-active',
+        'commercial_status' => 'active',
+        'plan_slug' => 'starter',
+    ]);
+
+    $response = $this->withToken($platformToken)
+        ->postJson(route('api.v1.tenants.reactivate-commercial', $tenant->public_id), [
+            'tokenName' => 'should-not-issue',
+        ], idempotencyHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('commercialStatus', 'active')
+        ->assertJsonPath('token', null);
+});
+
+test('non-platform token cannot cancel or reactivate commercial', function () {
+    $tenant = Tenant::factory()->create([
+        'slug' => 'feat-commercial-forbidden',
+        'commercial_status' => 'active',
+        'plan_slug' => 'starter',
+    ]);
+    $clientToken = app(TenantTokenService::class)->issue($tenant, 'cliente')->plainTextToken;
+
+    $this->withToken($clientToken)
+        ->postJson(route('api.v1.tenants.cancel-commercial', $tenant->public_id), [], idempotencyHeaders())
+        ->assertForbidden();
+
+    $this->withToken($clientToken)
+        ->postJson(route('api.v1.tenants.reactivate-commercial', $tenant->public_id), [], idempotencyHeaders())
+        ->assertForbidden();
+});

@@ -57,7 +57,7 @@ Los valores se inyectan desde `appConfig.themeColors` (configuración admin). Lo
 
 ## Stack previsto
 
-- Laravel 11+ · Redis · Horizon · Green API · Jobs/colas · Sanctum · Inertia + Vue 3
+- Laravel 13 · Redis · Horizon · Green API · Jobs/colas · Sanctum · Inertia + Vue 3
 
 Ver `docs/DEPLOY.md` y `docs/spec/prompt2-laravel-nucleo.md`.
 

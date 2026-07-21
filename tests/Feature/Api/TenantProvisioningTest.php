@@ -97,3 +97,40 @@ test('platform service can show tenant by public id', function () {
         ->assertOk()
         ->assertJsonPath('publicId', $tenant->public_id);
 });
+
+test('platform PATCH rejects commercial fields that bypass activate-plan', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'name' => 'Before Commercial',
+        'commercial_status' => 'demo',
+        'plan_slug' => 'demo',
+        'messages_monthly_limit' => 100,
+    ]);
+
+    $this->withToken($token)
+        ->patchJson(route('api.v1.tenants.update', $tenant->public_id), [
+            'planSlug' => 'empresa',
+            'commercialStatus' => 'active',
+            'messagesMonthlyLimit' => 999999,
+        ], idempotencyHeaders())
+        ->assertUnprocessable();
+
+    $tenant->refresh();
+    expect($tenant->plan_slug)->toBe('demo')
+        ->and($tenant->commercial_status)->toBe('demo')
+        ->and($tenant->messages_monthly_limit)->toBe(100);
+});
+
+test('platform PATCH still updates name and isActive', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create(['name' => 'Rename Me', 'is_active' => true]);
+
+    $this->withToken($token)
+        ->patchJson(route('api.v1.tenants.update', $tenant->public_id), [
+            'name' => 'Renamed',
+            'isActive' => false,
+        ], idempotencyHeaders())
+        ->assertOk()
+        ->assertJsonPath('name', 'Renamed')
+        ->assertJsonPath('isActive', false);
+});

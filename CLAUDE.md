@@ -7,7 +7,7 @@ API Laravel en **api.lebytek.com**: intermediario **Green API (WhatsApp)**, cola
 | Producto | Repo | Dominio | Stack |
 |----------|------|---------|-------|
 | **SaaS admin Lebytek** | `Parzival2103/Lebytek_Framework` (skeleton) | `waapi.lebytek.com` | PHP framework propio (Onion), hostings simples |
-| **Esta API** | `Parzival2103/WhatsApiLebytek` | `api.lebytek.com` | Laravel 11+, Inertia+Vue, Horizon, Sanctum |
+| **Esta API** | `Parzival2103/WhatsApiLebytek` | `api.lebytek.com` | Laravel 13, Inertia+Vue, Horizon, Sanctum |
 
 **No usar skeleton ni paquete `lebytek/framework` aquí.** Solo Laravel.
 
