@@ -136,6 +136,25 @@ test('tenant cannot read another tenant message', function () {
         ->assertNotFound();
 });
 
+test('GET messages missing publicId returns sanitized 404 without model FQCN', function () {
+    $tenant = Tenant::factory()->create();
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo('mensajes.ver');
+    $token = $client->createToken('client', ['mensajes.ver'])->plainTextToken;
+
+    $missingPublicId = '01MISSINGMSGPUBLICID0000000';
+
+    $response = $this->withToken($token)
+        ->getJson(route('api.v1.messages.show', $missingPublicId));
+
+    $response
+        ->assertNotFound()
+        ->assertJsonPath('message', 'Resource not found.')
+        ->assertJsonMissingPath('exception');
+
+    expect($response->getContent())->not->toContain('App\\Models');
+});
+
 test('GET messages returns sent status', function () {
     $tenant = Tenant::factory()->create();
     $mensaje = Mensaje::factory()->create([
