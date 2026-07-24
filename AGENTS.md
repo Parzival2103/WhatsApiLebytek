@@ -22,13 +22,22 @@ Guía para agentes de IA y **Cursor Automations** en este repositorio.
 
 **Regla crítica:** no fusionar `feature/backoffice-api-integration` → `main` en Framework sin orden explícita del usuario.
 
+## División de trabajo (sesión interactiva)
+
+| Rol | Responsabilidad |
+|-----|-----------------|
+| **Agente** | Programar, auditar, tests locales/CI, ops VPS (`ssh lebytek-vps`), cerrar issues con evidencia |
+| **Humano** | Diseñar, testear producto, conformidad con el cliente final |
+
+Los planes en `docs/superpowers/plans/` **pueden y deben** incluir tasks de ops (deploy, migrate, Horizon, cron, smoke) ejecutables por el agente vía `ssh lebytek-vps` cuando el usuario pide ejecutar el plan / SDD. No marcar esos tasks como "human-only" por defecto.
+
 ## Lectura obligatoria antes de auditar o cambiar código
 
 1. `CLAUDE.md` — límites del producto y comandos
 2. `docs/ARCHITECTURE.md` — mapa del ecosistema
 3. `docs/automation/CONTEXT.md` — contexto ampliado para automatizaciones
 4. `docs/integration/waapi-api-contract.md` — contrato HTTP v1
-5. `docs/DEPLOY.md` — runbook VPS (solo lectura para automations)
+5. `docs/DEPLOY.md` — runbook VPS (también ejecutable por el agente en sesión autorizada)
 
 ## Estructura clave
 
@@ -53,23 +62,55 @@ php artisan scribe:generate
 
 CI: `.github/workflows/tests.yml` (PHP 8.3, Node 22, Redis 7).
 
-## Política para automatizaciones
+## Flujo de entrega (sesión interactiva / planes)
+
+Cuando el trabajo es de producto (no AUTOMATION-01), el agente sigue:
+
+1. **Commit** en rama de trabajo (si el usuario lo pide)
+2. **PR** hacia la rama base correcta
+3. **CI green** antes de merge
+4. **Revisar ramas abiertas** (`gh pr list`, ramas `feature/*` / `automation/*`) para no pisar trabajo en curso
+5. **Merge a `main`** solo si aplica a **este repo** (WhatsApiLebytek) y no hay conflicto con trabajo explícito en otra rama
+
+### Excepción Framework (obligatoria)
+
+- **No** mergear `Lebytek_Framework` `feature/backoffice-api-integration` → `main` salvo orden explícita del usuario.
+- Deploy de Framework en VPS = pull de `feature/backoffice-api-integration`, no merge a `main`.
+- Si el usuario está trabajando explícitamente en esa feature (u otra rama nombrada), no fusionar ni “limpiar” esa rama hacia `main` por iniciativa del agente.
+
+## Ops VPS (sesión interactiva)
+
+Acceso: alias SSH `lebytek-vps`. Preferir `ssh lebytek-vps '…'` no interactivo. Runbook: `docs/DEPLOY.md`.
+
+**Permitido** al ejecutar un plan / orden de deploy en chat:
+
+- `git pull` de la rama de deploy del sitio
+- `composer install --no-dev`, `npm ci` / `npm run build`
+- `php artisan migrate --force`, caches, `scribe:generate`
+- `supervisorctl restart …-horizon:*`
+- Verificar/instalar cron `schedule:run`
+- Smokes HTTP (`/up`, endpoints documentados)
+- Actualizar checklists / cerrar issues con evidencia (SHA, migrate, Horizon, cron)
+
+**Ops prohibidos siempre:**
+
+- Editar `.env` de producción o secretos
+- `git push --force`
+- Borrar BD / datos
+- Merge Framework `feature/backoffice-api-integration` → `main`
+- Desactivar RBAC, firmas de webhook, Horizon o tests
+
+## Política para Cursor Automations (no supervisadas)
 
 Ver `docs/automation/README.md` y `.cursor/rules/automation-safety.mdc`.
 
-**Prohibido sin revisión humana explícita:**
+Las automatizaciones diarias **no** reemplazan ops: sin SSH, sin deploy VPS, sin merge a `main`. Solo lectura, reportes, issues y como máximo un PR trivial en `automation/*`.
 
-- Deploy, SSH, `git push` a producción, cambios en VPS
-- Editar `.env` de producción o secretos
-- `migrate` en producción
-- Merge a `main` o cambios destructivos en BD
-- Desactivar tests, Horizon, RBAC o firmas de webhook
-
-**Permitido con criterio:**
+**Permitido en automations:**
 
 - Leer repo, tests, docs, `git log`, diff
 - Escribir reportes en `docs/automation-reports/`
-- Abrir PR con fixes triviales (typos, docs, linter)
+- Abrir PR con fixes triviales (typos, docs, linter) en rama `automation/*`
 - Abrir issue para riesgo medio/alto
 
 ## Automatizaciones definidas
