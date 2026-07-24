@@ -2,6 +2,7 @@
 
 use App\Jobs\ProvisionGreenInstanceJob;
 use App\Models\Integration\Instancia;
+use App\Services\GreenApi\GreenApiInstanceSettings;
 use App\Services\GreenApi\PartnerClient;
 use Illuminate\Support\Facades\Http;
 
@@ -29,5 +30,16 @@ test('provision job resumes configuring when credentials already exist', functio
         ->and($instancia->last_error)->toBeNull();
 
     Http::assertNotSent(fn ($request) => str_contains($request->url(), '/partner/createInstance/'));
-    Http::assertSent(fn ($request) => str_contains($request->url(), '/setSettings/'));
+
+    Http::assertSent(function ($request) {
+        if (! str_contains($request->url(), '/setSettings/')) {
+            return false;
+        }
+
+        return ($request['delaySendMessagesMilliseconds'] ?? null) === GreenApiInstanceSettings::DELAY_SEND_MESSAGES_MILLISECONDS
+            && array_key_exists('webhookUrl', $request->data())
+            && array_key_exists('webhookUrlToken', $request->data())
+            && ($request['incomingWebhook'] ?? null) === 'yes'
+            && ($request['stateWebhook'] ?? null) === 'yes';
+    });
 });

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Exceptions\GreenApiException;
 use App\Jobs\Middleware\RateLimitedWithRedis;
 use App\Models\Integration\Instancia;
+use App\Services\GreenApi\GreenApiInstanceSettings;
 use App\Services\GreenApi\InstanceClient;
 use App\Services\GreenApi\PartnerClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -82,6 +83,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 'webhookUrlToken' => config('services.green_api.webhook_secret'),
                 'incomingWebhook' => 'yes',
                 'stateWebhook' => 'yes',
+                'delaySendMessagesMilliseconds' => GreenApiInstanceSettings::DELAY_SEND_MESSAGES_MILLISECONDS,
             ]);
 
             $greenState = $client->getStateInstance();
