@@ -17,7 +17,15 @@
 
 ---
 
-## Hallazgos
+## Resueltos desde la última auditoría
+
+| ID previo | Qué era | Resolución |
+|-----------|---------|------------|
+| | | |
+
+---
+
+## Hallazgos abiertos
 
 | ID | Sev | Área | Ubicación | Descripción | Acción |
 |----|-----|------|-----------|-------------|--------|
