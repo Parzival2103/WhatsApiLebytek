@@ -158,6 +158,12 @@ curl -sfI https://api.lebytek.com/ | head -1
 #   https://api.lebytek.com/api/v1/tenants
 # Emitir token plataforma waapi:
 # php artisan integration:issue-waapi-token --revoke
+# Green send delay (Yellow Card mitigation) — once after deploy that adds green:apply-send-delay.
+# Prefer a low-traffic window: each successful setSettings REBOOTS that Green instance;
+# settings can take up to ~5 minutes to apply (Green docs).
+# php artisan green:apply-send-delay --dry-run
+# php artisan green:apply-send-delay
+# Expect brief green_state / send blips while instances reboot; do not re-run in a tight loop.
 ```
 
 Checklist:
@@ -169,6 +175,7 @@ Checklist:
 - [ ] `/admin/login` accesible; primer login fuerza cambio de contraseña
 - [ ] Horizon accesible solo para emails en `HORIZON_ALLOWED_EMAILS`
 - [ ] Upload branding persiste en R2 (`UPLOADS_DISK=s3`)
+- [ ] (One-shot after delay feature ships) `php artisan green:apply-send-delay --dry-run` then without `--dry-run` (low traffic; Green reboots each instance)
 
 ---
 
