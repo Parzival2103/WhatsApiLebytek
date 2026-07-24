@@ -31,7 +31,7 @@ Sistema de automatizaciones para revisión, auditoría y reportes. **No reemplaz
 
 | ID | Nombre | Estado |
 |----|--------|--------|
-| 01 | Daily SaaS Technical Audit | Definido — ver `AUTOMATION-01-daily-audit.md` |
+| 01 | Daily SaaS Technical Audit | Definido — ver `AUTOMATION-01-daily-audit.md` (máx. **1 PR abierta**; lee PRs previas y cierra duplicados) |
 | 02 | PR Review Gate | Pendiente |
 | 03 | Post-merge regression digest | Pendiente |
 | 04 | VPS health digest (read-only) | Pendiente |
