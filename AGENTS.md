@@ -17,10 +17,13 @@ Guía para agentes de IA y **Cursor Automations** en este repositorio.
 | Dominio | Repo | Rama activa VPS | Rol |
 |---------|------|-----------------|-----|
 | api.lebytek.com | **Este repo** | `main` | Motor WhatsApp, colas, webhooks, API `/api/v1` |
-| lebytek.com / waapi | `Parzival2103/Lebytek_Framework` | `feature/backoffice-api-integration` | Back-office, leads, CRUD Engine, orquestación api |
+| lebytek.com / waapi | `Parzival2103/Lebytek_Portal` | `main` | App, Marketing, leads y orquestación api |
+| package plataforma | `Parzival2103/Lebytek_Framework` | `main` (release semver) | Kernel, RBAC, CRUD Engine y Payments genérico |
 | docs.lebytek.com | `Parzival2103/docs.lebytek.com` | `main` | Hub Docsify (mirror de docs) |
 
 **Regla crítica:** no fusionar `feature/backoffice-api-integration` → `main` en Framework sin orden explícita del usuario.
+Esa feature es referencia histórica y no es base para auditorías, specs, planes
+o implementación nueva.
 
 ## División de trabajo (sesión interactiva)
 
@@ -75,7 +78,8 @@ Cuando el trabajo es de producto (no AUTOMATION-01), el agente sigue:
 ### Excepción Framework (obligatoria)
 
 - **No** mergear `Lebytek_Framework` `feature/backoffice-api-integration` → `main` salvo orden explícita del usuario.
-- Deploy de Framework en VPS = pull de `feature/backoffice-api-integration`, no merge a `main`.
+- Framework no se despliega como sitio: se publica por semver y Portal lo instala por Composer.
+- Deploy de lebytek.com/waapi = `Lebytek_Portal/main` con `composer.lock`.
 - Si el usuario está trabajando explícitamente en esa feature (u otra rama nombrada), no fusionar ni “limpiar” esa rama hacia `main` por iniciativa del agente.
 
 ## Ops VPS (sesión interactiva)
@@ -118,3 +122,5 @@ Las automatizaciones diarias **no** reemplazan ops: sin SSH, sin deploy VPS, sin
 | ID | Archivo | Trigger |
 |----|---------|---------|
 | AUTOMATION-01 | `docs/automation/AUTOMATION-01-daily-audit.md` | Diario ~08:00 |
+| AUTOMATION-02 | [Prompt en Framework](https://github.com/Parzival2103/Lebytek_Framework/blob/main/docs/automation/AUTOMATION-02-audit-to-spec.md) | Después de auditoría elegible |
+| AUTOMATION-03 | [Prompt en Framework](https://github.com/Parzival2103/Lebytek_Framework/blob/main/docs/automation/AUTOMATION-03-spec-to-plan.md) | Después de spec elegible |

@@ -10,7 +10,7 @@ Este prompt es **multi-repo**: mismo texto en WhatsApiLebytek, Framework, docs, 
 | Campo | Valor |
 |-------|--------|
 | Nombre | Daily SaaS Technical Audit |
-| Repos | Cualquier repo del ecosistema (checkout de `main` o rama activa del sitio) |
+| Repos | Una automation por repo; checkout siempre desde la rama canónica `main` |
 | Cron sugerido | `0 8 * * *` (diario 08:00, ajustar zona en editor) |
 
 ---
@@ -25,14 +25,27 @@ Hacer una revisión diaria del repositorio para detectar riesgos, deuda técnica
 Contexto:
 Este proyecto es parte de un ecosistema SaaS en VPS. Prioriza estabilidad, seguridad, mantenibilidad, arquitectura modular y compatibilidad multitenant.
 
+### Preflight de rama y ownership (obligatorio)
+
+1. Obtén el repo y rama default con `gh repo view`.
+2. Haz fetch de `origin/main` y registra rama actual, `HEAD`, `origin/main` y merge-base.
+3. La rama de trabajo creada por la automation debe descender del `origin/main` actual.
+4. Si el checkout desciende de `feature/backoffice-api-integration`, detente: reporta configuración incorrecta y no generes auditoría, spec, plan ni cambios.
+5. Ramas canónicas:
+   - `WhatsApiLebytek/main`: API Laravel.
+   - `Lebytek_Framework/main`: package/plataforma Composer.
+   - `Lebytek_Portal/main`: app desplegable lebytek.com/waapi y negocio Marketing.
+6. `feature/backoffice-api-integration` es referencia histórica del monolito. No es rama de producción actual ni base válida para trabajo nuevo.
+7. Para estado de producción Portal, verifica `Lebytek_Portal/main` y su evidencia de cutover; no infieras producción desde scripts o planes legacy del Framework.
+
 ### Continuidad (hacer primero, antes de auditar)
 
 1. Lista PRs abiertas de auditoría en este repo:
-   `gh pr list --state open --limit 30 --json number,title,headRefName,url,createdAt`
-   Filtra por título que contenga `audit` / `auditor` / `auditoría` (case-insensitive).
+   `gh pr list --state open --limit 30 --json number,title,headRefName,baseRefName,url,createdAt`
+   Filtra por `baseRefName=main` y título que contenga `audit` / `auditor` / `auditoría` (case-insensitive).
 2. Si hay alguna: lee la más reciente (body + archivo(s) de reporte en el diff). Reutiliza hallazgos abiertos; no los reescribas como nuevos. Marca como resueltos solo los que ya estén corregidos en la rama base.
 3. No abras un issue duplicado si ya existe uno para el mismo problema.
-4. Al terminar, deja **como máximo 1 PR abierta de auditoría**: actualiza la más reciente o abre una nueva, y cierra las demás con comentario apuntando a la superviviente (`gh pr close <n> --comment "..."`).
+4. Al terminar, deja **como máximo 1 PR abierta de esta automation hacia `main`**. No cierres ni modifiques PRs de otra rama base, otro repo o etapa (spec/plan).
 
 Debes revisar:
 1. Cambios recientes en Git.
@@ -53,7 +66,11 @@ Reglas:
 - No tocar credenciales, .env real, producción, SSH, backups ni datos sensibles.
 - Ejecuta pruebas/lint si el entorno lo permite.
 - Si no puedes verificar algo, dilo claramente.
-- Máximo 1 PR abierta de auditoría por repo al final de la corrida (ver Continuidad).
+- Máximo 1 PR abierta de auditoría por repo y rama base al final de la corrida (ver Continuidad).
+- No copies Marketing/Portal al Framework ni asumas APIs encontradas solo en la feature legacy.
+- Un gate debe demostrar que ejecutó al menos un test. Rechaza como falso verde
+  `0 passed`, `0 tests`, `No tests found`, `No tests executed` o cualquier
+  salida exitosa sin conteo/evidencia de tests ejecutados.
 
 Output:
 Genera un reporte con:

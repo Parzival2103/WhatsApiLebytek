@@ -5,11 +5,11 @@ Documento de referencia para Cursor Automations. Mantener alineado con `docs/ARC
 ## Mapa de productos
 
 ```
-lebytek.com (Framework)  ──Bearer plataforma──►  api.lebytek.com (Laravel)
-        │                                              │
-        │  leads, CRUD, email                          │  WhatsApp, colas, webhooks
-        ▼                                              ▼
-   waapi.lebytek.com (portal cliente, fase posterior)   Green API
+lebytek.com / waapi (Lebytek_Portal) ──Bearer plataforma──► api.lebytek.com
+                 │                                           │
+                 │ Marketing, leads, membresías               │ WhatsApp, colas
+                 ▼                                           ▼
+        lebytek/framework vía Composer                     Green API
 docs.lebytek.com (mirror público de docs)
 ```
 
@@ -29,7 +29,7 @@ docs.lebytek.com (mirror público de docs)
 
 | Área | Ubicación | Riesgo |
 |------|-----------|--------|
-| API v1 | `routes/api.php`, `app/Http/Controllers/Api/V1/` | Alto — contrato con Framework |
+| API v1 | `routes/api.php`, `app/Http/Controllers/Api/V1/` | Alto — contrato con Portal |
 | Webhooks | `IncomingWebhookController`, middleware firma/idempotencia | Alto |
 | RBAC | `config/permissions.php`, `ensure.api.permission` | Alto |
 | Jobs | `app/Jobs/*`, `RateLimitedWithRedis` | Medio |
@@ -50,33 +50,39 @@ docs.lebytek.com (mirror público de docs)
 - Supervisor: `lebytek-api-horizon` → `php artisan horizon`
 - Deploy manual: `git pull origin main` + migrate + cache (ver `docs/DEPLOY.md`)
 
-## Lebytek_Framework — detalle para auditoría cruzada
+## Ecosistema Framework / Portal — auditoría cruzada
 
 Usar `gh` para leer el repo hermano; no asumir checkout local.
 
-### Stack
+### Lebytek_Framework (package source)
 
-- PHP 8.1+, framework propio Onion (`src/` + `app/`)
+- Rama canónica para auditoría, spec, plan e implementación: `main`
+- PHP 8.1+, framework propio Onion (`src/`)
 - Sin Vue/npm; PHP views + Bootstrap CDN + `crud-engine.js`
 - MySQL/MariaDB, PHPMailer, dompdf
-- Tests: harness `microtest` (`php tests/run.php`), **sin GitHub Actions**
+- Tests: harness `microtest` (`php tests/run.php`)
+- No es la app desplegable y no debe contener negocio Marketing/Portal
+- `feature/backoffice-api-integration` es referencia histórica; nunca base de trabajo nuevo
 
-### Módulos (`config/vertical.php`)
+### Lebytek_Portal (app desplegable)
 
-- core, crud-engine, dashboard, calendario, pdf-kit, reportes, integrations
-- **marketing** — habilitado en VPS vía scripts deploy, no siempre en local
+- Rama canónica y deploy: `main`
+- Dueño de Marketing, leads, membresías, landing y orquestación api
+- Consume `lebytek/framework` mediante versión semver fijada en `composer.lock`
+- Producción lebytek.com/waapi fue migrada a Portal el 2026-07-21
+- Verificar estado actual en el repo Portal; no usar scripts legacy del Framework como fuente de verdad
 
 ### Integración api
 
-- `app/Infrastructure/Integrations/LebytekApi/LebytekApiClient.php`
+- Portal: `app/Infrastructure/Integrations/LebytekApi/LebytekApiClient.php`
 - `LeadApiProvisioningService`, portal waapi (`WAAPI_PORTAL_ENABLED`)
-- Rama VPS: `feature/backoffice-api-integration` (**no merge a main sin orden**)
+- Framework genérico llega a Portal por Composer, no copiando código ni editando `vendor/`
 
-### Scripts ops relevantes (VPS, read-only para automation)
+### Referencias legacy
 
-- `scripts/lebytek-api-health.php` — cron cada 5 min (documentado)
-- `scripts/expire-api-demos.php` — cron diario
-- `scripts/vps-deploy-lebytek-com.sh`, `vps-deploy-waapi.sh`
+- Los scripts `vps-deploy-lebytek-com.sh` / `vps-deploy-waapi.sh` que clonan
+  Framework feature son pre-cutover y no son autoridad para planes nuevos.
+- No mergear `feature/backoffice-api-integration` → `main` salvo orden explícita.
 
 ## docs.lebytek.com
 

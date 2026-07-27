@@ -6,10 +6,11 @@ API Laravel en **api.lebytek.com**: intermediario **Green API (WhatsApp)**, cola
 
 | Producto | Repo | Dominio | Stack |
 |----------|------|---------|-------|
-| **SaaS admin Lebytek** | `Parzival2103/Lebytek_Framework` (skeleton) | `waapi.lebytek.com` | PHP framework propio (Onion), hostings simples |
+| **Portal Lebytek** | `Parzival2103/Lebytek_Portal` (`main`) | `lebytek.com` / `waapi.lebytek.com` | App PHP consumidora |
+| **Framework package** | `Parzival2103/Lebytek_Framework` (`main`) | Sin dominio propio | Composer `lebytek/framework` |
 | **Esta API** | `Parzival2103/WhatsApiLebytek` | `api.lebytek.com` | Laravel 13, Inertia+Vue, Horizon, Sanctum |
 
-**No usar skeleton ni paquete `lebytek/framework` aquí.** Solo Laravel.
+**No usar Portal, skeleton ni paquete `lebytek/framework` aquí.** Solo Laravel.
 
 ## VPS
 
@@ -36,7 +37,7 @@ php artisan queue:work redis
 
 ## Integración con waapi
 
-El SaaS en waapi consume esta API (REST `/api/v1`, Sanctum). No duplicar lógica Green API en el framework PHP del skeleton.
+Portal consume esta API (REST `/api/v1`, Sanctum). No duplicar lógica Green API en Portal ni en el Framework.
 
 - Contrato API: `docs/integration/waapi-api-contract.md`
 - Delegación roles (lebytek.com ↔ api): `docs/integration/role-delegation-lebytek-api.md`
