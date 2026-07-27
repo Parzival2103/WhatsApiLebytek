@@ -1,21 +1,26 @@
 # Arquitectura — ecosistema Lebytek
 
-## Ecosistema (2026-06-30)
+## Ecosistema (actualizado 2026-07-24)
 
 | Dominio | Rol hoy | Repo | Integración api |
 |---------|---------|------|-----------------|
-| **lebytek.com** | Back-office + landing; FTP México = legacy pre-1.0 | Lebytek_Framework (`feature/backoffice-api-integration`) | **Orquesta** (Bearer plataforma) |
+| **lebytek.com / waapi** | Portal, back-office, landing y membresías | Lebytek_Portal (`main`) | **Orquesta** (Bearer plataforma) |
+| **Framework package** | Kernel, RBAC, CRUD Engine, Payments genérico | Lebytek_Framework (`main`, semver) | Librería consumida por Portal |
 | **api.lebytek.com** | Motor WhatsApp + admin ops | WhatsApiLebytek (`main`) | Fuente de verdad técnica |
-| **waapi.lebytek.com** | Panel cliente (fase final) | congelado en VPS | Solo lectura futura; no orquestador |
 | **docs.lebytek.com** | Docs públicas | placeholder | Sin cambios |
 
-**Deploy:** lebytek.com target VPS `/home/lebytek/htdocs/lebytek.com` (docroot `public/`). DNS cutover after E2E.
+**Deploy:** lebytek.com y waapi despliegan `Lebytek_Portal/main`; Framework
+llega mediante Composer y la versión fijada en `composer.lock`.
 
 ## Responsabilidades
 
-**lebytek.com (back-office):** landing pública, panel de leads, orquestación de provisioning en api con token de plataforma, comunicación al cliente por correo.
+**Portal (lebytek.com / waapi):** landing pública, panel de leads,
+orquestación de provisioning en api con token de plataforma y comunicación al
+cliente por correo.
 
-**waapi.lebytek.com:** panel cliente en fase posterior; congelado en VPS; no orquesta provisioning.
+**Framework:** plataforma reutilizable sin negocio Portal y sin deploy web
+propio. `feature/backoffice-api-integration` queda como referencia histórica,
+no como base para trabajo nuevo.
 
 **api (Laravel):** envío masivo, rate limits, webhooks Green API, jobs Redis, credenciales cifradas por tenant, API pública versionada `/api/v1`.
 
