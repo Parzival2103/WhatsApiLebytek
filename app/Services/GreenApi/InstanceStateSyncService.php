@@ -2,7 +2,9 @@
 
 namespace App\Services\GreenApi;
 
+use App\Exceptions\GreenApiException;
 use App\Models\Integration\Instancia;
+use Illuminate\Support\Facades\Log;
 
 class InstanceStateSyncService
 {
@@ -18,7 +20,20 @@ class InstanceStateSyncService
             (string) $instancia->api_token_instance,
         );
 
-        $greenState = $client->getStateInstance();
+        try {
+            $greenState = $client->getStateInstance();
+        } catch (GreenApiException $e) {
+            Log::warning('Green state sync skipped; serving cached instance status', [
+                'instancia_id' => $instancia->id,
+                'public_id' => $instancia->public_id,
+                'status' => $instancia->status,
+                'error' => $e->getMessage(),
+                'http_status' => $e->statusCode(),
+            ]);
+
+            return $instancia->fresh() ?? $instancia;
+        }
+
         $attributes = ['green_state' => $greenState];
 
         if ($greenState === 'authorized') {

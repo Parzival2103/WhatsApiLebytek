@@ -3,6 +3,7 @@
 namespace App\Services\GreenApi;
 
 use App\Exceptions\GreenApiException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 class InstanceClient
@@ -16,17 +17,48 @@ class InstanceClient
     public function getStateInstance(): string
     {
         $url = $this->instanceUrl('getStateInstance');
-        $response = Http::timeout(15)->get($url);
+        $maxAttempts = 3;
+        $delaySeconds = 1;
 
-        if (! $response->successful()) {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $response = Http::timeout(15)->get($url);
+            } catch (ConnectionException $e) {
+                if ($attempt < $maxAttempts) {
+                    sleep($delaySeconds);
+                    $delaySeconds *= 2;
+
+                    continue;
+                }
+
+                throw new GreenApiException(
+                    'getStateInstance failed: '.$e->getMessage(),
+                    0,
+                );
+            }
+
+            if ($response->successful()) {
+                return (string) ($response->json('stateInstance') ?? '');
+            }
+
+            $status = $response->status();
+            $retryable = in_array($status, [0, 429, 500, 502, 503, 504], true);
+
+            if ($retryable && $attempt < $maxAttempts) {
+                sleep($delaySeconds);
+                $delaySeconds *= 2;
+
+                continue;
+            }
+
             throw new GreenApiException(
                 'getStateInstance failed: '.$response->body(),
-                $response->status(),
+                $status,
                 $response->json(),
             );
         }
 
-        return (string) ($response->json('stateInstance') ?? '');
+        throw new GreenApiException('getStateInstance failed after retries.', 0);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Integration\Instancia;
 use App\Models\User;
 use App\Services\GreenApi\InstanceStateSyncService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -141,4 +142,56 @@ test('GET qr?force=1 bypasses cached QR and fetches a new one from Green', funct
 
     expect($forced)->toBe('fresh-qr-base64')
         ->and($instancia->refresh()->qr_code)->toBe('fresh-qr-base64');
+});
+
+test('refreshFromGreen serves cached instance when Green getStateInstance is unreachable', function () {
+    $instancia = Instancia::factory()->create([
+        'status' => 'waiting_qr',
+        'green_state' => 'notAuthorized',
+        'id_instance' => '1109998891',
+        'api_token_instance' => 'green-secret',
+    ]);
+
+    Http::fake([
+        '*/waInstance1109998891/getStateInstance/*' => function () {
+            throw new ConnectionException('Connection timed out.');
+        },
+    ]);
+
+    $fresh = app(InstanceStateSyncService::class)->refreshFromGreen($instancia);
+
+    expect($fresh->status)->toBe('waiting_qr')
+        ->and($fresh->green_state)->toBe('notAuthorized');
+});
+
+test('GET instance returns cached status when Green sync is temporarily unavailable', function () {
+    $tenant = Tenant::factory()->create();
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    $instancia = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'waiting_qr',
+        'green_state' => 'notAuthorized',
+        'id_instance' => '1109998892',
+        'api_token_instance' => 'green-secret',
+    ]);
+
+    Http::fake([
+        '*/waInstance1109998892/getStateInstance/*' => function () {
+            throw new ConnectionException('Connection timed out.');
+        },
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo('instancias.ver');
+    $token = $client->createToken('client', ['instancias.ver'])->plainTextToken;
+
+    $this->withToken($token)
+        ->getJson(route('api.v1.instances.show', $instancia->public_id))
+        ->assertOk()
+        ->assertJsonPath('status', 'waiting_qr')
+        ->assertJsonPath('greenState', 'notAuthorized');
 });
