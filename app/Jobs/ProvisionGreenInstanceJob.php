@@ -18,9 +18,9 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    private const SET_SETTINGS_INITIAL_DELAY_SECONDS = 2;
+    private const SET_SETTINGS_INITIAL_DELAY_SECONDS = 3;
 
-    private const SET_SETTINGS_RETRY_DELAY_SECONDS = 2;
+    private const SET_SETTINGS_RETRY_DELAY_SECONDS = 3;
 
     public int $tries = 3;
 
@@ -58,6 +58,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 : '';
 
             $freshGreenCredentials = false;
+            $client = null;
 
             if ($idInstance === '' || $apiTokenInstance === '') {
                 $credentials = $partnerClient->createInstance($instancia->label);
@@ -98,6 +99,11 @@ class ProvisionGreenInstanceJob implements ShouldQueue
             ]);
         } catch (GreenApiException $e) {
             if ($this->attempts() >= $this->tries) {
+                if ($client instanceof InstanceClient
+                    && $this->finalizeDespiteSettingsFailure($client, $instancia, $e)) {
+                    return;
+                }
+
                 $instancia->update([
                     'status' => 'failed',
                     'last_error' => $e->getMessage(),
@@ -113,6 +119,49 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    private function finalizeDespiteSettingsFailure(
+        InstanceClient $client,
+        Instancia $instancia,
+        GreenApiException $settingsError,
+    ): bool {
+        if (! str_contains($settingsError->getMessage(), 'setSettings')) {
+            return false;
+        }
+
+        if ($instancia->id_instance === null || ! filled($instancia->api_token_instance)) {
+            return false;
+        }
+
+        try {
+            $greenState = $client->getStateInstance();
+        } catch (GreenApiException) {
+            return false;
+        }
+
+        if (! in_array($greenState, ['notAuthorized', 'authorized'], true)) {
+            return false;
+        }
+
+        $status = $greenState === 'authorized' ? 'authorized' : 'waiting_qr';
+
+        $instancia->update([
+            'green_state' => $greenState,
+            'status' => $status,
+            'last_error' => null,
+            'authorized_at' => $status === 'authorized'
+                ? ($instancia->authorized_at ?? now())
+                : null,
+        ]);
+
+        Log::warning('ProvisionGreenInstanceJob marked instance usable despite setSettings failure', [
+            'instancia_id' => $instancia->id,
+            'green_state' => $greenState,
+            'error' => $settingsError->getMessage(),
+        ]);
+
+        return true;
     }
 
     private function applyGreenSettings(InstanceClient $client, bool $freshGreenCredentials): void
