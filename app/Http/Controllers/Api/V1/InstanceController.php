@@ -57,9 +57,11 @@ class InstanceController extends Controller
             'purpose' => $validated['purpose'] ?? 'demo',
         ]);
 
+        $async = ($result['created'] ?? false) || ($result['retried'] ?? false);
+
         return (new InstanceResource($result['instancia']))
             ->response()
-            ->setStatusCode($result['created'] ? 202 : 200);
+            ->setStatusCode($async ? 202 : 200);
     }
 
     /**
