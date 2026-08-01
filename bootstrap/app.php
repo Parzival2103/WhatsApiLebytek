@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\GreenApiException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -56,5 +57,22 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json(['message' => 'Resource not found.'], 404);
+        });
+
+        $exceptions->render(function (GreenApiException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $status = match (true) {
+                $e->statusCode() === 429 => 429,
+                $e->statusCode() >= 500 => 502,
+                $e->statusCode() >= 400 => $e->statusCode(),
+                default => 502,
+            };
+
+            return response()->json([
+                'message' => $e->getMessage() !== '' ? $e->getMessage() : 'Green API provider unavailable.',
+            ], $status);
         });
     })->create();
