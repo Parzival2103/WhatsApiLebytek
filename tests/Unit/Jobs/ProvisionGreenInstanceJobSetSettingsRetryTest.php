@@ -36,3 +36,29 @@ test('provision job retries setSettings after fresh Green credentials return 401
 
     Http::assertSentCount(4);
 });
+
+test('provision job degrades to waiting_qr when setSettings keeps failing but Green instance is alive', function () {
+    config(['services.green_api.partner_token' => 'test-partner-token']);
+
+    Http::fake([
+        '*/waInstance770022698856/setSettings/*' => Http::response('', 401),
+        '*/waInstance770022698856/getStateInstance/*' => Http::response(['stateInstance' => 'notAuthorized'], 200),
+    ]);
+
+    $instancia = Instancia::factory()->create([
+        'status' => 'configuring',
+        'id_instance' => '770022698856',
+        'api_token_instance' => 'fresh-token',
+    ]);
+
+    $job = new ProvisionGreenInstanceJob($instancia->id);
+    $job->job = Mockery::mock();
+    $job->job->shouldReceive('attempts')->andReturn(3);
+    $job->handle(app(PartnerClient::class));
+
+    $instancia->refresh();
+
+    expect($instancia->status)->toBe('waiting_qr')
+        ->and($instancia->green_state)->toBe('notAuthorized')
+        ->and($instancia->last_error)->toBeNull();
+});
