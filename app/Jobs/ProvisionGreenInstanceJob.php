@@ -18,6 +18,10 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
+    private const SET_SETTINGS_INITIAL_DELAY_SECONDS = 2;
+
+    private const SET_SETTINGS_RETRY_DELAY_SECONDS = 2;
+
     public int $tries = 3;
 
     /** @var list<int> */
@@ -53,6 +57,8 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 ? (string) $instancia->api_token_instance
                 : '';
 
+            $freshGreenCredentials = false;
+
             if ($idInstance === '' || $apiTokenInstance === '') {
                 $credentials = $partnerClient->createInstance($instancia->label);
 
@@ -65,6 +71,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 
                 $idInstance = $credentials['idInstance'];
                 $apiTokenInstance = $credentials['apiTokenInstance'];
+                $freshGreenCredentials = true;
             } elseif ($instancia->status !== 'configuring') {
                 $instancia->update([
                     'status' => 'configuring',
@@ -78,13 +85,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 $apiTokenInstance,
             );
 
-            $client->setSettings([
-                'webhookUrl' => config('services.green_api.webhook_url'),
-                'webhookUrlToken' => config('services.green_api.webhook_secret'),
-                'incomingWebhook' => 'yes',
-                'stateWebhook' => 'yes',
-                'delaySendMessagesMilliseconds' => GreenApiInstanceSettings::DELAY_SEND_MESSAGES_MILLISECONDS,
-            ]);
+            $this->applyGreenSettings($client, $freshGreenCredentials);
 
             $greenState = $client->getStateInstance();
             $status = $greenState === 'authorized' ? 'authorized' : 'waiting_qr';
@@ -111,6 +112,44 @@ class ProvisionGreenInstanceJob implements ShouldQueue
             }
 
             throw $e;
+        }
+    }
+
+    private function applyGreenSettings(InstanceClient $client, bool $freshGreenCredentials): void
+    {
+        $settings = [
+            'webhookUrl' => config('services.green_api.webhook_url'),
+            'webhookUrlToken' => config('services.green_api.webhook_secret'),
+            'incomingWebhook' => 'yes',
+            'stateWebhook' => 'yes',
+            'delaySendMessagesMilliseconds' => GreenApiInstanceSettings::DELAY_SEND_MESSAGES_MILLISECONDS,
+        ];
+
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            if ($freshGreenCredentials) {
+                sleep(self::SET_SETTINGS_INITIAL_DELAY_SECONDS + (($attempt - 1) * self::SET_SETTINGS_RETRY_DELAY_SECONDS));
+            }
+
+            try {
+                $client->setSettings($settings);
+
+                return;
+            } catch (GreenApiException $e) {
+                $retryable = $freshGreenCredentials
+                    && $e->statusCode() === 401
+                    && $attempt < $maxAttempts;
+
+                if (! $retryable) {
+                    throw $e;
+                }
+
+                Log::warning('ProvisionGreenInstanceJob setSettings retry after Green 401', [
+                    'instancia_id' => $this->instanciaId,
+                    'attempt' => $attempt,
+                ]);
+            }
         }
     }
 }

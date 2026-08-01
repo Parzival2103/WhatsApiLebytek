@@ -17,7 +17,7 @@ class InstanceProvisioningService
 
     /**
      * @param  array{label: string, externalRef?: string|null, purpose?: string}  $data
-     * @return array{instancia: Instancia, created: bool}
+     * @return array{instancia: Instancia, created: bool, retried?: bool}
      */
     public function provision(int $tenantId, array $data): array
     {
@@ -34,7 +34,15 @@ class InstanceProvisioningService
                 ->first();
 
             if ($existing !== null) {
-                return ['instancia' => $existing, 'created' => false];
+                if ($existing->status === 'failed') {
+                    return [
+                        'instancia' => $this->retryFailedInstance($existing),
+                        'created' => false,
+                        'retried' => true,
+                    ];
+                }
+
+                return ['instancia' => $existing, 'created' => false, 'retried' => false];
             }
         }
 
@@ -51,7 +59,38 @@ class InstanceProvisioningService
 
         ProvisionGreenInstanceJob::dispatch($instancia->id);
 
-        return ['instancia' => $instancia->fresh(), 'created' => true];
+        return ['instancia' => $instancia->fresh(), 'created' => true, 'retried' => false];
+    }
+
+    private function retryFailedInstance(Instancia $existing): Instancia
+    {
+        $lastError = strtolower((string) ($existing->last_error ?? ''));
+        $greenCredentialsStale = $existing->id_instance === null
+            || str_contains($lastError, 'delete')
+            || str_contains($lastError, 'not found')
+            || str_contains($lastError, 'createinstance');
+
+        if ($greenCredentialsStale) {
+            $existing->update([
+                'status' => 'provisioning',
+                'last_error' => null,
+                'id_instance' => null,
+                'api_token_instance' => null,
+                'green_state' => null,
+                'qr_code' => null,
+                'qr_expires_at' => null,
+                'authorized_at' => null,
+            ]);
+        } else {
+            $existing->update([
+                'status' => 'configuring',
+                'last_error' => null,
+            ]);
+        }
+
+        ProvisionGreenInstanceJob::dispatch($existing->id);
+
+        return $existing->fresh() ?? $existing;
     }
 
     public function delete(Instancia $instancia): void
