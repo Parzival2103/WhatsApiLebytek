@@ -189,4 +189,10 @@ Let's Encrypt vía CloudPanel/certbot. Renovación automática.
 
 - **No** usar `admin@sistema.local` / `password` en producción; usar `ProductionSeeder` con `ADMIN_INITIAL_PASSWORD`.
 - Generar assets frontend (`npm run build`) en cada deploy; CloudPanel sirve desde `public/build`.
-- OpenAPI/Scribe: `knuckleswtf/scribe` va en **`require`** (no `require-dev`) para que `composer install --no-dev` deje las rutas `/docs`, `/docs.openapi` y `/docs.postman` activas. Regenerar en cada deploy con `php artisan scribe:generate` (artefactos en `.gitignore`).
+- OpenAPI/Scribe: `knuckleswtf/scribe` va en **`require`** para generar el spec en cada deploy (`php artisan scribe:generate`). Las rutas `/docs*` **no** se exponen en api.lebytek.com (`add_routes=false`); redirigen a **docs.lebytek.com**. Tras generar, sincronizar artefactos:
+
+```bash
+php artisan scribe:generate --no-interaction
+node scripts/sync-openapi-to-docs.mjs
+# Luego build + deploy docsV2 → docs.lebytek.com
+```

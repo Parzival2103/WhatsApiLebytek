@@ -46,4 +46,8 @@ return [
         'webhook_secret' => env('WEBHOOK_SECRET'),
     ],
 
+    'docs' => [
+        'site_url' => env('DOCS_SITE_URL', 'https://docs.lebytek.com'),
+    ],
+
 ];

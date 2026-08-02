@@ -77,7 +77,7 @@ php artisan serve
 - API health: `GET /api/v1/health` con token Sanctum
 - Provisioning tenants (back-office lebytek.com): `POST /api/v1/tenants` — ver `docs/integration/waapi-api-contract.md`
 - Token plataforma waapi: `php artisan integration:issue-waapi-token`
-- OpenAPI: `php artisan scribe:generate` → `/docs`
+- OpenAPI: `php artisan scribe:generate` → publicar en docs con `node scripts/sync-openapi-to-docs.mjs` (ver `docs/DEPLOY.md`)
 
 ## Cómo agregar un vertical de dominio
 
