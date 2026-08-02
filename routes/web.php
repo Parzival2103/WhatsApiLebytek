@@ -13,6 +13,12 @@ use App\Services\DashboardWidgetRegistry;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+$docsSiteUrl = rtrim((string) config('services.docs.site_url', 'https://docs.lebytek.com'), '/');
+
+Route::redirect('/docs', $docsSiteUrl, 301)->name('docs.legacy.redirect');
+Route::redirect('/docs.openapi', "{$docsSiteUrl}/openapi/openapi.yaml", 301)->name('docs.legacy.openapi');
+Route::redirect('/docs.postman', "{$docsSiteUrl}/openapi/postman.json", 301)->name('docs.legacy.postman');
+
 Route::get('/', function () {
     return Inertia::render('Public/Index');
 })->name('public.index');

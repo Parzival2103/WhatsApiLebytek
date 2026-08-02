@@ -23,7 +23,7 @@ docs.lebytek.com (mirror público de docs)
 - Horizon: colas `default`, `transactional`, `campaigns`, `provisioning`
 - Sanctum + spatie/laravel-permission
 - Pest 4 (~100 tests), CI en GitHub Actions
-- Scribe para OpenAPI en `/docs`
+- Scribe genera OpenAPI en deploy; se publica en **docs.lebytek.com** (`node scripts/sync-openapi-to-docs.mjs`), no en `/docs` del API host
 
 ### Superficies críticas a auditar
 

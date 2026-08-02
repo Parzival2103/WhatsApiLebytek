@@ -17,6 +17,7 @@
 /.worktrees
 /.scribe
 /public/vendor/scribe
+/public/docs
 /resources/views/scribe
 /storage/app/private/scribe
 /auth.json

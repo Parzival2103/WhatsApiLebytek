@@ -8,15 +8,16 @@ Contrato técnico de integración del motor **api.lebytek.com** (WhatsApiLebytek
 
 **Versión:** `v1`  
 **Base URL:** `https://api.lebytek.com/api/v1`  
-**OpenAPI (Scribe):** generado en cada deploy (`php artisan scribe:generate`):
+**Documentación pública:** https://docs.lebytek.com  
+**OpenAPI (Scribe):** generado en cada deploy de la API (`php artisan scribe:generate`) y publicado en docs:
 
 | Recurso | URL |
 |---------|-----|
-| Docs HTML | https://api.lebytek.com/docs |
-| OpenAPI YAML | https://api.lebytek.com/docs.openapi |
-| Colección Postman | https://api.lebytek.com/docs.postman |
+| Hub documentación | https://docs.lebytek.com |
+| OpenAPI YAML | https://docs.lebytek.com/openapi/openapi.yaml |
+| Colección Postman | https://docs.lebytek.com/openapi/postman.json |
 
-`knuckleswtf/scribe` está en `require` (producción) para que estas rutas existan tras `composer install --no-dev`.
+Las rutas `/docs*` en **api.lebytek.com** no sirven documentación: redirigen a docs.lebytek.com (301). Scribe sigue en `require` para generar artefactos en deploy; `add_routes` está desactivado en la API.
 
 ---
 
