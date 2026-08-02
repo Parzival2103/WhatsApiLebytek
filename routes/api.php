@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountStatusController;
+use App\Http\Controllers\Api\V1\DemoLeadAdminSnapshotController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IncomingWebhookController;
 use App\Http\Controllers\Api\V1\InstanceController;
@@ -48,6 +49,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api', 'ensure.api.per
     Route::post('/tenants/{tenant:public_id}/reactivate-commercial', [TenantController::class, 'reactivateCommercial'])
         ->middleware('permission:tenants.gestionar')
         ->name('api.v1.tenants.reactivate-commercial');
+
+    Route::post('/admin/demo-leads-snapshot', [DemoLeadAdminSnapshotController::class, 'batch'])
+        ->middleware('permission:tenants.ver')
+        ->name('api.v1.admin.demo-leads-snapshot');
 
     Route::get('/instances', [InstanceController::class, 'index'])
         ->middleware('permission:instancias.ver')
