@@ -18,14 +18,22 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    private const SET_SETTINGS_INITIAL_DELAY_SECONDS = 3;
+    /** Default first wait after createInstance (seconds). Overridable via config for tests. */
+    private const SET_SETTINGS_INITIAL_DELAY_SECONDS = 5;
 
-    private const SET_SETTINGS_RETRY_DELAY_SECONDS = 3;
+    /** Default extra wait between setSettings 401 retries (seconds). */
+    private const SET_SETTINGS_RETRY_DELAY_SECONDS = 10;
+
+    private const SET_SETTINGS_MAX_ATTEMPTS = 6;
+
+    private const GET_STATE_MAX_ATTEMPTS = 5;
+
+    private const GET_STATE_RETRY_DELAY_SECONDS = 5;
 
     public int $tries = 3;
 
     /** @var list<int> */
-    public array $backoff = [10, 30, 60];
+    public array $backoff = [15, 45, 90];
 
     public function __construct(
         public readonly int $instanciaId,
@@ -57,7 +65,6 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 ? (string) $instancia->api_token_instance
                 : '';
 
-            $freshGreenCredentials = false;
             $client = null;
 
             if ($idInstance === '' || $apiTokenInstance === '') {
@@ -72,7 +79,6 @@ class ProvisionGreenInstanceJob implements ShouldQueue
 
                 $idInstance = $credentials['idInstance'];
                 $apiTokenInstance = $credentials['apiTokenInstance'];
-                $freshGreenCredentials = true;
             } elseif ($instancia->status !== 'configuring') {
                 $instancia->update([
                     'status' => 'configuring',
@@ -86,9 +92,11 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                 $apiTokenInstance,
             );
 
-            $this->applyGreenSettings($client, $freshGreenCredentials);
+            // Always allow 401 backoff: job retries reuse stored credentials, and Green
+            // often rejects instance tokens for tens of seconds after createInstance.
+            $this->applyGreenSettings($client);
 
-            $greenState = $client->getStateInstance();
+            $greenState = $this->getStateWithTransient401Retry($client);
             $status = $greenState === 'authorized' ? 'authorized' : 'waiting_qr';
 
             $instancia->update([
@@ -135,7 +143,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
         }
 
         try {
-            $greenState = $client->getStateInstance();
+            $greenState = $this->getStateWithTransient401Retry($client);
         } catch (GreenApiException) {
             return false;
         }
@@ -164,7 +172,7 @@ class ProvisionGreenInstanceJob implements ShouldQueue
         return true;
     }
 
-    private function applyGreenSettings(InstanceClient $client, bool $freshGreenCredentials): void
+    private function applyGreenSettings(InstanceClient $client): void
     {
         $settings = [
             'webhookUrl' => config('services.green_api.webhook_url'),
@@ -174,21 +182,20 @@ class ProvisionGreenInstanceJob implements ShouldQueue
             'delaySendMessagesMilliseconds' => GreenApiInstanceSettings::DELAY_SEND_MESSAGES_MILLISECONDS,
         ];
 
-        $maxAttempts = 3;
+        $maxAttempts = max(1, (int) config(
+            'services.green_api.provision_set_settings_max_attempts',
+            self::SET_SETTINGS_MAX_ATTEMPTS,
+        ));
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            if ($freshGreenCredentials) {
-                sleep(self::SET_SETTINGS_INITIAL_DELAY_SECONDS + (($attempt - 1) * self::SET_SETTINGS_RETRY_DELAY_SECONDS));
-            }
+            $this->sleepSeconds($this->setSettingsDelaySeconds($attempt));
 
             try {
                 $client->setSettings($settings);
 
                 return;
             } catch (GreenApiException $e) {
-                $retryable = $freshGreenCredentials
-                    && $e->statusCode() === 401
-                    && $attempt < $maxAttempts;
+                $retryable = $e->statusCode() === 401 && $attempt < $maxAttempts;
 
                 if (! $retryable) {
                     throw $e;
@@ -199,6 +206,65 @@ class ProvisionGreenInstanceJob implements ShouldQueue
                     'attempt' => $attempt,
                 ]);
             }
+        }
+    }
+
+    /**
+     * Green often returns empty-body 401 on getState right after createInstance.
+     * Poll briefly before giving up so we do not mark a live instance as failed.
+     */
+    private function getStateWithTransient401Retry(InstanceClient $client): string
+    {
+        $maxAttempts = max(1, (int) config(
+            'services.green_api.provision_get_state_max_attempts',
+            self::GET_STATE_MAX_ATTEMPTS,
+        ));
+        $delay = max(0, (int) config(
+            'services.green_api.provision_get_state_retry_delay',
+            self::GET_STATE_RETRY_DELAY_SECONDS,
+        ));
+
+        $last = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                return $client->getStateInstance();
+            } catch (GreenApiException $e) {
+                $last = $e;
+                $retryable = $e->statusCode() === 401 && $attempt < $maxAttempts;
+                if (! $retryable) {
+                    throw $e;
+                }
+
+                Log::warning('ProvisionGreenInstanceJob getState retry after Green 401', [
+                    'instancia_id' => $this->instanciaId,
+                    'attempt' => $attempt,
+                ]);
+                $this->sleepSeconds($delay);
+            }
+        }
+
+        throw $last ?? new GreenApiException('getStateInstance failed after retries.', 0);
+    }
+
+    private function setSettingsDelaySeconds(int $attempt): int
+    {
+        $initial = max(0, (int) config(
+            'services.green_api.provision_set_settings_initial_delay',
+            self::SET_SETTINGS_INITIAL_DELAY_SECONDS,
+        ));
+        $step = max(0, (int) config(
+            'services.green_api.provision_set_settings_retry_delay',
+            self::SET_SETTINGS_RETRY_DELAY_SECONDS,
+        ));
+
+        return $initial + (($attempt - 1) * $step);
+    }
+
+    private function sleepSeconds(int $seconds): void
+    {
+        if ($seconds > 0) {
+            sleep($seconds);
         }
     }
 }

@@ -164,34 +164,24 @@ test('refreshFromGreen serves cached instance when Green getStateInstance is unr
         ->and($fresh->green_state)->toBe('notAuthorized');
 });
 
-test('GET instance returns cached status when Green sync is temporarily unavailable', function () {
-    $tenant = Tenant::factory()->create();
-    Module::factory()->create([
-        'tenant_id' => $tenant->id,
-        'module_key' => 'whatsapp',
-        'is_enabled' => true,
-    ]);
+test('refreshFromGreen recovers false-failed instance when Green reports notAuthorized', function () {
     $instancia = Instancia::factory()->create([
-        'tenant_id' => $tenant->id,
-        'status' => 'waiting_qr',
-        'green_state' => 'notAuthorized',
-        'id_instance' => '1109998892',
+        'status' => 'failed',
+        'last_error' => 'setSettings failed (HTTP 401): ',
+        'green_state' => null,
+        'id_instance' => '1109998893',
         'api_token_instance' => 'green-secret',
     ]);
 
     Http::fake([
-        '*/waInstance1109998892/getStateInstance/*' => function () {
-            throw new ConnectionException('Connection timed out.');
-        },
+        '*/waInstance1109998893/getStateInstance/*' => Http::response([
+            'stateInstance' => 'notAuthorized',
+        ], 200),
     ]);
 
-    $client = User::factory()->forTenant($tenant)->create();
-    $client->givePermissionTo('instancias.ver');
-    $token = $client->createToken('client', ['instancias.ver'])->plainTextToken;
+    $fresh = app(InstanceStateSyncService::class)->refreshFromGreen($instancia);
 
-    $this->withToken($token)
-        ->getJson(route('api.v1.instances.show', $instancia->public_id))
-        ->assertOk()
-        ->assertJsonPath('status', 'waiting_qr')
-        ->assertJsonPath('greenState', 'notAuthorized');
+    expect($fresh->status)->toBe('waiting_qr')
+        ->and($fresh->green_state)->toBe('notAuthorized')
+        ->and($fresh->last_error)->toBeNull();
 });
