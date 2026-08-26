@@ -39,11 +39,20 @@ class InstanceStateSyncService
         if ($greenState === 'authorized') {
             $attributes['status'] = 'authorized';
             $attributes['authorized_at'] = $instancia->authorized_at ?? now();
+            $attributes['last_error'] = null;
         } elseif ($greenState === 'notAuthorized' && $instancia->status === 'authorized') {
             $attributes['status'] = 'waiting_qr';
             $attributes['authorized_at'] = null;
         } elseif ($instancia->status === 'configuring' && $greenState === 'notAuthorized') {
             $attributes['status'] = 'waiting_qr';
+            $attributes['last_error'] = null;
+        } elseif ($instancia->status === 'failed' && in_array($greenState, ['notAuthorized', 'authorized'], true)) {
+            // Recover false-failed rows after Green token race (setSettings 401).
+            $attributes['status'] = $greenState === 'authorized' ? 'authorized' : 'waiting_qr';
+            $attributes['last_error'] = null;
+            $attributes['authorized_at'] = $greenState === 'authorized'
+                ? ($instancia->authorized_at ?? now())
+                : null;
         }
 
         $instancia->update($attributes);
