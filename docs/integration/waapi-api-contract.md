@@ -47,7 +47,7 @@ api emite un token Sanctum propio del tenant durante el provisioning (ver `POST 
 | Header | `Authorization: Bearer {token por-tenant}` |
 | Emisión | `POST /tenants/{publicId}/tokens` (solo token de plataforma) — devuelto **una sola vez** en claro |
 | Confinamiento | confinado a su propio `tenant_id`; **ignora** `X-Tenant-Id` |
-| Permisos | `instancias.ver`, `mensajes.enviar`, `mensajes.ver`, `cuenta.ver` (**implementado**) |
+| Permisos | `instancias.ver`, `instancias.crear`, `mensajes.enviar`, `mensajes.ver`, `cuenta.ver` (**implementado**) |
 
 El back-office entrega este token al cliente en el "2º correo" (junto al enlace/login a waapi). Pago manual (correo/transferencia) lo gestiona `lebytek.com`.
 
@@ -383,23 +383,56 @@ Restaura `commercialStatus=active` tras soft-cancel, limpia `meta.cancelled_at` 
 
 **Estado:** **Implementado**  
 **Permiso:** `instancias.crear`  
-**Acceso:** solo cuenta de plataforma  
-**Header:** `X-Tenant-Id: {tenantPublicId}`  
+**Acceso:**
+- Token **por-tenant** (Bearer cliente) — confinado a su tenant; **no** requiere `X-Tenant-Id`
+- Token **plataforma** + header `X-Tenant-Id: {tenantPublicId}`
 **Idempotency-Key:** requerido  
+
+**Cupo (`max_instances` en `core_tenants`):**
+
+| planSlug | default max_instances |
+|----------|----------------------|
+| demo | 1 |
+| starter | 1 |
+| business | 3 |
+| empresa | `null` (ilimitado; override opcional `maxInstances` en activate-plan) |
+
+Si `count(instancias no soft-deleted) >= max_instances` (y el límite no es `null`) → **422**:
+
+```json
+{
+  "message": "Has alcanzado el límite de instancias WhatsApp de tu plan. Mejora tu cuenta para generar otra instancia."
+}
+```
+
+Misma regla para plataforma y cliente (sin bypass). Idempotencia por `externalRef` / retry de `failed` no consume cupo adicional.
 
 **Body:**
 
 ```json
 {
-  "label": "Demo Acme",
-  "externalRef": "lebytek_lead_42_instance",
-  "purpose": "demo"
+  "label": "WhatsApp Sucursal 2",
+  "externalRef": "opcional-idempotente",
+  "purpose": "production"
 }
 ```
 
-**Respuesta:** `202` provisioning (async Green Partner job) or `200`/`201` when idempotent/existing.
+`purpose`: `demo` \| `production`. Si se omite: `production` cuando `commercial_status=active`, si no `demo`.
 
-Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances/{publicId}/qr`, `DELETE /instances/{publicId}`.
+**Permiso `instancias.crear`:** la ruta usa middleware Spatie **`permission:instancias.crear`** sobre el **usuario** api-client (no basta con la lista de abilities del token Sanctum). Tras deploy:
+
+- **Tokens existentes:** ejecutar `php artisan tenants:sync-client-permissions` (ver sección Bootstrap) otorga `instancias.crear` al usuario api-client del tenant → el mismo token puede crear instancias **sin reemisión**.
+- **Tokens nuevos:** activate-plan, `POST /tenants/{publicId}/tokens` (defaults) y provisioning emiten abilities desde `demo_client_abilities`, que ya incluye `instancias.crear`.
+
+Sin el permiso Spatie en el usuario → **403** (aunque el token liste la ability).
+
+**Respuesta:** `202` provisioning (async) o `200` cuando idempotente/existente.
+
+Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances/{publicId}/qr`, `DELETE /instances/{publicId}` (DELETE sigue plataforma).
+
+**Follow-up (fuera de este repo en esta entrega):**
+- **docsV2:** allowlist POST `/instances` (+ opcional `account/status`), `createInstance`, sandbox UI used/limit, OpenAPI/Postman.
+- **Portal:** mostrar `instances.used`/`limit`; no duplicar enforcement (API es SoT).
 
 ---
 
@@ -481,9 +514,12 @@ Consulta cuota comercial del tenant autenticado: días restantes de demo, mensaj
     "messagesSentThisMonth": 12,
     "messagesRemainingThisMonth": 88,
     "messagesLimitThisMonth": 100
-  }
+  },
+  "instances": { "used": 1, "limit": 3 }
 }
 ```
+
+`instances.limit` puede ser `null` cuando el plan es ilimitado (p. ej. empresa).
 
 **Cuota:** si `messagesSentThisMonth >= messagesLimitThisMonth`, `POST /messages` responde `429` con mensaje de cuota excedida.
 
@@ -577,11 +613,18 @@ php artisan integration:issue-waapi-token --revoke
 # Copiar token → lebytek.com .env LEBYTEK_API_TOKEN
 ```
 
-Tras deploy que añade abilities a clientes demo (p. ej. `cuenta.ver`), sincronizar usuarios `api-client+*@tenants.lebytek.internal` ya provisionados:
+Tras deploy que añade permisos a clientes demo (p. ej. `cuenta.ver`, `instancias.crear`), sincronizar usuarios `api-client+*@tenants.lebytek.internal` ya provisionados:
 
 ```bash
 php artisan tenants:sync-client-permissions --dry-run
 php artisan tenants:sync-client-permissions
+```
+
+Tras migrate que backfill `max_instances` en `core_tenants`, verificar que solo planes ilimitados intencionales quedan con `NULL`:
+
+```sql
+SELECT plan_slug, COUNT(*) FROM core_tenants WHERE max_instances IS NULL GROUP BY plan_slug;
+-- Esperado: solo `empresa` (u otros planes con cupo ilimitado explícito)
 ```
 
 Variables api (código actual — ver `config/nucleo.php`):

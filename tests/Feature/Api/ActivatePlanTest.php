@@ -48,6 +48,9 @@ test('platform can activate starter plan and old token is rejected', function ()
         ->assertOk()
         ->assertJsonPath('commercialStatus', 'active')
         ->assertJsonPath('plan.slug', 'starter');
+
+    $tenant->refresh();
+    expect($tenant->max_instances)->toBe(1);
 });
 
 test('tenant token cannot activate plan', function () {
@@ -78,6 +81,26 @@ test('starter rejects client-supplied messagesMonthlyLimit with 422', function (
         ], idempotencyHeaders())
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['messagesMonthlyLimit']);
+});
+
+test('activate empresa can set maxInstances override', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'commercial_status' => 'demo',
+        'plan_slug' => 'demo',
+    ]);
+
+    $this->withToken($token)
+        ->postJson(route('api.v1.tenants.activate-plan', $tenant->public_id), [
+            'planSlug' => 'empresa',
+            'billingCycle' => 'monthly',
+            'orderExternalRef' => 'ord_empresa_max_inst',
+            'messagesMonthlyLimit' => 250000,
+            'maxInstances' => 5,
+        ], idempotencyHeaders())
+        ->assertCreated();
+
+    expect($tenant->fresh()->max_instances)->toBe(5);
 });
 
 test('empresa accepts custom messagesMonthlyLimit', function () {

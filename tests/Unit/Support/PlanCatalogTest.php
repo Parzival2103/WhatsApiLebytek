@@ -31,3 +31,28 @@ test('resolveMessagesMonthlyLimit rejects empresa override below min', function 
     expect(fn () => PlanCatalog::resolveMessagesMonthlyLimit('empresa', 1))
         ->toThrow(\InvalidArgumentException::class);
 });
+
+test('catalog includes max_instances per slug', function () {
+    expect(PlanCatalog::definition('demo')['max_instances'])->toBe(1)
+        ->and(PlanCatalog::definition('starter')['max_instances'])->toBe(1)
+        ->and(PlanCatalog::definition('business')['max_instances'])->toBe(3)
+        ->and(PlanCatalog::definition('empresa')['max_instances'])->toBeNull();
+});
+
+test('resolveMaxInstances returns catalog values and ignores override for starter', function () {
+    expect(PlanCatalog::resolveMaxInstances('starter', 99))->toBe(1)
+        ->and(PlanCatalog::resolveMaxInstances('business', null))->toBe(3);
+});
+
+test('resolveMaxInstances allows unlimited empresa without override', function () {
+    expect(PlanCatalog::resolveMaxInstances('empresa', null))->toBeNull();
+});
+
+test('resolveMaxInstances accepts empresa override', function () {
+    expect(PlanCatalog::resolveMaxInstances('empresa', 10))->toBe(10);
+});
+
+test('resolveMaxInstances rejects empresa override below one', function () {
+    expect(fn () => PlanCatalog::resolveMaxInstances('empresa', 0))
+        ->toThrow(\InvalidArgumentException::class);
+});

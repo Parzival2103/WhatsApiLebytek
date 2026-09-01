@@ -20,6 +20,7 @@ class ActivatePlanService
      *   billingCycle: string,
      *   orderExternalRef: string,
      *   messagesMonthlyLimit?: int|null,
+     *   maxInstances?: int|null,
      *   tokenName?: string|null
      * }  $data
      * @return array{
@@ -51,11 +52,22 @@ class ActivatePlanService
             ]);
         }
 
+        try {
+            $maxInstances = PlanCatalog::resolveMaxInstances(
+                $slug,
+                isset($data['maxInstances']) ? (int) $data['maxInstances'] : null,
+            );
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'maxInstances' => [$e->getMessage()],
+            ]);
+        }
+
         $orderRef = $data['orderExternalRef'];
         $tokenName = $data['tokenName'] ?? "cliente-{$slug}";
         $abilities = config('permissions.demo_client_abilities');
 
-        return DB::transaction(function () use ($tenant, $slug, $definition, $limit, $data, $orderRef, $tokenName, $abilities): array {
+        return DB::transaction(function () use ($tenant, $slug, $definition, $limit, $maxInstances, $data, $orderRef, $tokenName, $abilities): array {
             $tenant = Tenant::query()->whereKey($tenant->id)->lockForUpdate()->firstOrFail();
             $meta = $tenant->meta ?? [];
 
@@ -82,6 +94,7 @@ class ActivatePlanService
                 'plan_slug' => $slug,
                 'plan_name' => $definition['name'],
                 'messages_monthly_limit' => $limit,
+                'max_instances' => $maxInstances,
                 'demo_expires_at' => null,
                 'meta' => array_merge($meta, [
                     'billing_cycle' => $data['billingCycle'],

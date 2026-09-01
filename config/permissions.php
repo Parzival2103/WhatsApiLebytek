@@ -49,6 +49,7 @@ return [
     */
     'demo_client_abilities' => [
         'instancias.ver',
+        'instancias.crear',
         'mensajes.enviar',
         'mensajes.ver',
         'cuenta.ver',

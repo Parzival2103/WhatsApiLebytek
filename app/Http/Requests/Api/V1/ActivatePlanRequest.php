@@ -31,6 +31,12 @@ class ActivatePlanRequest extends FormRequest
                 'min:'.(int) config('plans.empresa.messages_monthly_limit_min', 1000),
                 'max:'.(int) config('plans.empresa.messages_monthly_limit_max', 10_000_000),
             ],
+            'maxInstances' => [
+                'nullable',
+                'integer',
+                'prohibited_unless:planSlug,empresa',
+                'min:1',
+            ],
             'tokenName' => ['nullable', 'string', 'max:100'],
         ];
     }
