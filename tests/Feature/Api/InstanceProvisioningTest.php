@@ -253,6 +253,104 @@ test('idempotent externalRef replay does not hit quota when already at limit', f
     expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
 });
 
+test('failed instance retry by external ref is allowed when quota is exhausted', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    $failed = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'external_ref' => 'lead_42',
+        'status' => 'failed',
+        'id_instance' => '770022692540',
+        'api_token_instance' => 'stale-token',
+        'last_error' => 'Green delete failed: Partner deleteInstanceAccount failed: Not found',
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Demo Acme',
+            'externalRef' => 'lead_42',
+            'purpose' => 'demo',
+        ], idempotencyHeaders())
+        ->assertAccepted()
+        ->assertJsonPath('publicId', $failed->public_id)
+        ->assertJsonPath('status', 'provisioning');
+
+    Bus::assertDispatched(ProvisionGreenInstanceJob::class);
+    expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
+});
+
+test('failed instance counts toward quota for new create without same external ref', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'external_ref' => 'lead_42',
+        'status' => 'failed',
+        'last_error' => 'setSettings failed (HTTP 401): ',
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Second',
+            'externalRef' => 'lead_99',
+            'purpose' => 'production',
+        ], idempotencyHeaders())
+        ->assertStatus(422)
+        ->assertJsonPath(
+            'message',
+            'Has alcanzado el límite de instancias WhatsApp de tu plan. Mejora tu cuenta para generar otra instancia.'
+        );
+
+    expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
+    Bus::assertNotDispatched(ProvisionGreenInstanceJob::class);
+});
+
+test('soft-deleted instance does not count toward quota', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ])->delete();
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Replacement',
+            'purpose' => 'production',
+        ], idempotencyHeaders())
+        ->assertAccepted();
+
+    Bus::assertDispatched(ProvisionGreenInstanceJob::class);
+    expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
+});
+
 test('null max_instances means unlimited', function () {
     $token = platformServiceToken();
     $tenant = Tenant::factory()->create([
