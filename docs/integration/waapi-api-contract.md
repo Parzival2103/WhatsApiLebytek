@@ -47,7 +47,7 @@ api emite un token Sanctum propio del tenant durante el provisioning (ver `POST 
 | Header | `Authorization: Bearer {token por-tenant}` |
 | Emisión | `POST /tenants/{publicId}/tokens` (solo token de plataforma) — devuelto **una sola vez** en claro |
 | Confinamiento | confinado a su propio `tenant_id`; **ignora** `X-Tenant-Id` |
-| Permisos | `instancias.ver`, `mensajes.enviar`, `mensajes.ver`, `cuenta.ver` (**implementado**) |
+| Permisos | `instancias.ver`, `instancias.crear`, `mensajes.enviar`, `mensajes.ver`, `cuenta.ver` (**implementado**) |
 
 El back-office entrega este token al cliente en el "2º correo" (junto al enlace/login a waapi). Pago manual (correo/transferencia) lo gestiona `lebytek.com`.
 
@@ -419,7 +419,12 @@ Misma regla para plataforma y cliente (sin bypass). Idempotencia por `externalRe
 
 `purpose`: `demo` \| `production`. Si se omite: `production` cuando `commercial_status=active`, si no `demo`.
 
-**Abilities:** tokens cliente nuevos (`demo_client_abilities` / activate-plan / issue token) incluyen `instancias.crear`. Tokens emitidos **antes** de este cambio carecen de la ability → **403** hasta reemisión.
+**Permiso `instancias.crear`:** la ruta usa middleware Spatie **`permission:instancias.crear`** sobre el **usuario** api-client (no basta con la lista de abilities del token Sanctum). Tras deploy:
+
+- **Tokens existentes:** ejecutar `php artisan tenants:sync-client-permissions` (ver sección Bootstrap) otorga `instancias.crear` al usuario api-client del tenant → el mismo token puede crear instancias **sin reemisión**.
+- **Tokens nuevos:** activate-plan, `POST /tenants/{publicId}/tokens` (defaults) y provisioning emiten abilities desde `demo_client_abilities`, que ya incluye `instancias.crear`.
+
+Sin el permiso Spatie en el usuario → **403** (aunque el token liste la ability).
 
 **Respuesta:** `202` provisioning (async) o `200` cuando idempotente/existente.
 
@@ -608,11 +613,18 @@ php artisan integration:issue-waapi-token --revoke
 # Copiar token → lebytek.com .env LEBYTEK_API_TOKEN
 ```
 
-Tras deploy que añade abilities a clientes demo (p. ej. `cuenta.ver`), sincronizar usuarios `api-client+*@tenants.lebytek.internal` ya provisionados:
+Tras deploy que añade permisos a clientes demo (p. ej. `cuenta.ver`, `instancias.crear`), sincronizar usuarios `api-client+*@tenants.lebytek.internal` ya provisionados:
 
 ```bash
 php artisan tenants:sync-client-permissions --dry-run
 php artisan tenants:sync-client-permissions
+```
+
+Tras migrate que backfill `max_instances` en `core_tenants`, verificar que solo planes ilimitados intencionales quedan con `NULL`:
+
+```sql
+SELECT plan_slug, COUNT(*) FROM core_tenants WHERE max_instances IS NULL GROUP BY plan_slug;
+-- Esperado: solo `empresa` (u otros planes con cupo ilimitado explícito)
 ```
 
 Variables api (código actual — ver `config/nucleo.php`):
