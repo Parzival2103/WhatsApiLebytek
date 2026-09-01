@@ -22,6 +22,7 @@ class StoreTenantTokenRequest extends FormRequest
             'abilities' => ['nullable', 'array'],
             'abilities.*' => ['string', Rule::in([
                 'instancias.ver',
+                'instancias.crear',
                 'mensajes.enviar',
                 'mensajes.ver',
                 'cuenta.ver',

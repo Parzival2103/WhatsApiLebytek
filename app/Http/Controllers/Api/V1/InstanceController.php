@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreInstanceRequest;
 use App\Http\Resources\Api\V1\InstanceResource;
+use App\Models\Core\Tenant;
 use App\Models\Integration\Instancia;
 use App\Services\GreenApi\InstanceClient;
 use App\Services\GreenApi\InstanceProvisioningService;
@@ -46,15 +47,19 @@ class InstanceController extends Controller
      */
     public function store(StoreInstanceRequest $request): JsonResponse
     {
-        $this->ensurePlatformService($request);
-
-        $tenantId = $this->provisioningService->resolveActingTenantId();
+        $tenantId = $this->resolveTenantAccess($request);
         $validated = $request->validated();
+
+        $purpose = $validated['purpose'] ?? null;
+        if ($purpose === null) {
+            $tenant = Tenant::query()->findOrFail($tenantId);
+            $purpose = $tenant->commercial_status === 'active' ? 'production' : 'demo';
+        }
 
         $result = $this->provisioningService->provision($tenantId, [
             'label' => $validated['label'],
             'externalRef' => $validated['externalRef'] ?? null,
-            'purpose' => $validated['purpose'] ?? 'demo',
+            'purpose' => $purpose,
         ]);
 
         $async = ($result['created'] ?? false) || ($result['retried'] ?? false);

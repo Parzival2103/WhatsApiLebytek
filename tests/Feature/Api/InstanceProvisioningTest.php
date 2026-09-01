@@ -146,33 +146,97 @@ test('instance creation resumes failed instance when green credentials remain va
         ->and($failed->last_error)->toBeNull();
 });
 
-test('tenant token can read own instances but not create', function () {
-    $tenant = Tenant::factory()->create();
+test('tenant token without instancias.crear cannot create', function () {
+    $tenant = Tenant::factory()->create([
+        'max_instances' => 3,
+        'plan_slug' => 'business',
+    ]);
     Module::factory()->create([
         'tenant_id' => $tenant->id,
         'module_key' => 'whatsapp',
         'is_enabled' => true,
     ]);
-    $instancia = Instancia::factory()->create([
-        'tenant_id' => $tenant->id,
-        'status' => 'waiting_qr',
-    ]);
 
     $client = User::factory()->forTenant($tenant)->create();
-    $client->givePermissionTo('instancias.ver');
+    $client->givePermissionTo(['instancias.ver']);
     $clientToken = $client->createToken('client', ['instancias.ver'])->plainTextToken;
 
     $this->withToken($clientToken)
-        ->getJson(route('api.v1.instances.show', $instancia->public_id))
-        ->assertOk()
-        ->assertJsonPath('publicId', $instancia->public_id);
-
-    $this->withToken($clientToken)
-        ->withHeader('X-Tenant-Id', $tenant->public_id)
         ->postJson(route('api.v1.instances.store'), [
             'label' => 'Blocked',
         ], idempotencyHeaders())
         ->assertForbidden();
+});
+
+test('tenant token with instancias.crear can create second instance under business cupo', function () {
+    $tenant = Tenant::factory()->create([
+        'commercial_status' => 'active',
+        'plan_slug' => 'business',
+        'max_instances' => 3,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo(['instancias.ver', 'instancias.crear']);
+    $clientToken = $client->createToken('client', ['instancias.ver', 'instancias.crear'])->plainTextToken;
+
+    $this->withToken($clientToken)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'WhatsApp Sucursal 2',
+            'purpose' => 'production',
+        ], idempotencyHeaders())
+        ->assertAccepted()
+        ->assertJsonPath('label', 'WhatsApp Sucursal 2')
+        ->assertJsonPath('status', 'provisioning');
+
+    Bus::assertDispatched(ProvisionGreenInstanceJob::class);
+    expect(
+        Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count()
+    )->toBe(2);
+});
+
+test('tenant token on starter at cupo gets 422 upgrade message', function () {
+    $tenant = Tenant::factory()->create([
+        'commercial_status' => 'active',
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ]);
+
+    $client = User::factory()->forTenant($tenant)->create();
+    $client->givePermissionTo(['instancias.crear']);
+    $clientToken = $client->createToken('client', ['instancias.crear'])->plainTextToken;
+
+    $this->withToken($clientToken)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Should fail',
+        ], idempotencyHeaders())
+        ->assertStatus(422)
+        ->assertJsonPath(
+            'message',
+            'Has alcanzado el límite de instancias WhatsApp de tu plan. Mejora tu cuenta para generar otra instancia.'
+        );
+
+    expect(
+        Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count()
+    )->toBe(1);
+    Bus::assertNotDispatched(ProvisionGreenInstanceJob::class);
 });
 
 test('instance routes require whatsapp module enabled', function () {

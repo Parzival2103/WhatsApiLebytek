@@ -41,6 +41,7 @@ test('platform service issues demo client abilities when abilities omitted', fun
         ->assertJsonPath('abilities', $expectedAbilities);
 
     expect($expectedAbilities)->toContain('cuenta.ver');
+    expect($expectedAbilities)->toContain('instancias.crear');
 
     $clientUser = User::query()
         ->where('email', 'api-client+default-abilities-demo@tenants.lebytek.internal')
@@ -51,6 +52,7 @@ test('platform service issues demo client abilities when abilities omitted', fun
     expect($clientUser->can('mensajes.enviar'))->toBeTrue();
     expect($clientUser->can('mensajes.ver'))->toBeTrue();
     expect($clientUser->can('instancias.ver'))->toBeTrue();
+    expect($clientUser->can('instancias.crear'))->toBeTrue();
 });
 
 test('default issued tenant token can access account status', function () {
