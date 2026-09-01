@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'name', 'slug', 'external_ref', 'is_active',
     'commercial_status', 'plan_slug', 'plan_name',
-    'demo_started_at', 'demo_expires_at', 'messages_monthly_limit',
+    'demo_started_at', 'demo_expires_at', 'messages_monthly_limit', 'max_instances',
     'last_api_activity_at', 'first_message_sent_at', 'meta',
 ])]
 class Tenant extends Model
@@ -46,6 +46,7 @@ class Tenant extends Model
             'last_api_activity_at' => 'datetime',
             'first_message_sent_at' => 'datetime',
             'messages_monthly_limit' => 'integer',
+            'max_instances' => 'integer',
             'meta' => 'array',
         ];
     }

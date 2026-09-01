@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Core\Module;
 use App\Models\Core\Tenant;
+use App\Support\PlanCatalog;
 use Database\Seeders\CoreSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -63,6 +64,7 @@ class TenantProvisioningService
      *     demo_started_at: \Illuminate\Support\Carbon,
      *     demo_expires_at: \Illuminate\Support\Carbon,
      *     messages_monthly_limit: int,
+     *     max_instances: int|null,
      * }
      */
     private function demoCommercialAttributes(): array
@@ -79,6 +81,7 @@ class TenantProvisioningService
             'demo_started_at' => $now,
             'demo_expires_at' => $now->copy()->addDays($demoDays),
             'messages_monthly_limit' => (int) ($demoPlan['messages_monthly_limit'] ?? 100),
+            'max_instances' => PlanCatalog::resolveMaxInstances($demoSlug, null),
         ];
     }
 
