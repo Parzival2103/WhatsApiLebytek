@@ -191,3 +191,87 @@ test('instance routes require whatsapp module enabled', function () {
         ], idempotencyHeaders())
         ->assertForbidden();
 });
+
+test('platform create is rejected with 422 when instance quota is exhausted', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => 'authorized',
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Second',
+            'purpose' => 'production',
+        ], idempotencyHeaders())
+        ->assertStatus(422)
+        ->assertJsonPath(
+            'message',
+            'Has alcanzado el límite de instancias WhatsApp de tu plan. Mejora tu cuenta para generar otra instancia.'
+        );
+
+    expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
+    Bus::assertNotDispatched(ProvisionGreenInstanceJob::class);
+});
+
+test('idempotent externalRef replay does not hit quota when already at limit', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'starter',
+        'max_instances' => 1,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    $existing = Instancia::factory()->create([
+        'tenant_id' => $tenant->id,
+        'external_ref' => 'same_ref',
+        'status' => 'authorized',
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Demo Acme',
+            'externalRef' => 'same_ref',
+        ], idempotencyHeaders())
+        ->assertOk()
+        ->assertJsonPath('publicId', $existing->public_id);
+
+    expect(Instancia::query()->withoutGlobalScope('tenant')->where('tenant_id', $tenant->id)->count())->toBe(1);
+});
+
+test('null max_instances means unlimited', function () {
+    $token = platformServiceToken();
+    $tenant = Tenant::factory()->create([
+        'plan_slug' => 'empresa',
+        'max_instances' => null,
+    ]);
+    Module::factory()->create([
+        'tenant_id' => $tenant->id,
+        'module_key' => 'whatsapp',
+        'is_enabled' => true,
+    ]);
+    Instancia::factory()->create(['tenant_id' => $tenant->id, 'status' => 'authorized']);
+
+    $this->withToken($token)
+        ->withHeader('X-Tenant-Id', $tenant->public_id)
+        ->postJson(route('api.v1.instances.store'), [
+            'label' => 'Another',
+        ], idempotencyHeaders())
+        ->assertAccepted();
+
+    Bus::assertDispatched(ProvisionGreenInstanceJob::class);
+});

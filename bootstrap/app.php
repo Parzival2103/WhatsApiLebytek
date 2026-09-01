@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\GreenApiException;
+use App\Exceptions\InstanceQuotaExceededException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -74,5 +75,13 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => $e->getMessage() !== '' ? $e->getMessage() : 'Green API provider unavailable.',
             ], $status);
+        });
+
+        $exceptions->render(function (InstanceQuotaExceededException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return response()->json(['message' => $e->getMessage()], 422);
         });
     })->create();

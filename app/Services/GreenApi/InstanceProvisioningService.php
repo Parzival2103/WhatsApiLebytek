@@ -2,6 +2,7 @@
 
 namespace App\Services\GreenApi;
 
+use App\Exceptions\InstanceQuotaExceededException;
 use App\Jobs\DeleteGreenInstanceJob;
 use App\Jobs\ProvisionGreenInstanceJob;
 use App\Models\Core\Tenant;
@@ -45,6 +46,8 @@ class InstanceProvisioningService
                 return ['instancia' => $existing, 'created' => false, 'retried' => false];
             }
         }
+
+        $this->ensureInstanceQuotaAvailable($tenant);
 
         $instancia = DB::transaction(function () use ($tenantId, $data, $externalRef): Instancia {
             return Instancia::query()->create([
@@ -91,6 +94,24 @@ class InstanceProvisioningService
         ProvisionGreenInstanceJob::dispatch($existing->id);
 
         return $existing->fresh() ?? $existing;
+    }
+
+    private function ensureInstanceQuotaAvailable(Tenant $tenant): void
+    {
+        $limit = $tenant->max_instances;
+
+        if ($limit === null) {
+            return;
+        }
+
+        $used = Instancia::query()
+            ->withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenant->id)
+            ->count();
+
+        if ($used >= $limit) {
+            throw new InstanceQuotaExceededException;
+        }
     }
 
     public function delete(Instancia $instancia): void
