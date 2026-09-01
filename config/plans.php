@@ -13,18 +13,21 @@ return [
         'demo' => [
             'name' => 'Demo',
             'messages_monthly_limit' => 100,
+            'max_instances' => 1,
             'http_send_per_minute' => 10,
             'job_send_per_minute' => 30,
         ],
         'starter' => [
             'name' => 'Starter',
             'messages_monthly_limit' => 5000,
+            'max_instances' => 1,
             'http_send_per_minute' => 30,
             'job_send_per_minute' => 60,
         ],
         'business' => [
             'name' => 'Business',
             'messages_monthly_limit' => 80000,
+            'max_instances' => 3,
             'http_send_per_minute' => 60,
             'job_send_per_minute' => 120,
         ],
@@ -32,6 +35,7 @@ return [
             'name' => 'Enterprise',
             // null = must supply messagesMonthlyLimit on activate-plan
             'messages_monthly_limit' => null,
+            'max_instances' => null,
             'http_send_per_minute' => 120,
             'job_send_per_minute' => 180,
         ],

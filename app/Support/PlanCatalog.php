@@ -7,7 +7,7 @@ use InvalidArgumentException;
 final class PlanCatalog
 {
     /**
-     * @return array{name: string, messages_monthly_limit: int|null, http_send_per_minute: int, job_send_per_minute: int}|null
+     * @return array{name: string, messages_monthly_limit: int|null, max_instances: int|null, http_send_per_minute: int, job_send_per_minute: int}|null
      */
     public static function definition(string $slug): ?array
     {
@@ -42,5 +42,28 @@ final class PlanCatalog
         }
 
         return $plan['messages_monthly_limit'];
+    }
+
+    public static function resolveMaxInstances(string $slug, ?int $override): ?int
+    {
+        $plan = self::definition($slug);
+
+        if ($plan === null) {
+            throw new InvalidArgumentException("Unknown plan slug [{$slug}].");
+        }
+
+        if ($slug === 'empresa') {
+            if ($override === null) {
+                return null;
+            }
+
+            if ($override < 1) {
+                throw new InvalidArgumentException('maxInstances must be at least 1 for empresa.');
+            }
+
+            return $override;
+        }
+
+        return $plan['max_instances'];
     }
 }
