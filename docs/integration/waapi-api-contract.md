@@ -383,23 +383,51 @@ Restaura `commercialStatus=active` tras soft-cancel, limpia `meta.cancelled_at` 
 
 **Estado:** **Implementado**  
 **Permiso:** `instancias.crear`  
-**Acceso:** solo cuenta de plataforma  
-**Header:** `X-Tenant-Id: {tenantPublicId}`  
+**Acceso:**
+- Token **por-tenant** (Bearer cliente) — confinado a su tenant; **no** requiere `X-Tenant-Id`
+- Token **plataforma** + header `X-Tenant-Id: {tenantPublicId}`
 **Idempotency-Key:** requerido  
+
+**Cupo (`max_instances` en `core_tenants`):**
+
+| planSlug | default max_instances |
+|----------|----------------------|
+| demo | 1 |
+| starter | 1 |
+| business | 3 |
+| empresa | `null` (ilimitado; override opcional `maxInstances` en activate-plan) |
+
+Si `count(instancias no soft-deleted) >= max_instances` (y el límite no es `null`) → **422**:
+
+```json
+{
+  "message": "Has alcanzado el límite de instancias WhatsApp de tu plan. Mejora tu cuenta para generar otra instancia."
+}
+```
+
+Misma regla para plataforma y cliente (sin bypass). Idempotencia por `externalRef` / retry de `failed` no consume cupo adicional.
 
 **Body:**
 
 ```json
 {
-  "label": "Demo Acme",
-  "externalRef": "lebytek_lead_42_instance",
-  "purpose": "demo"
+  "label": "WhatsApp Sucursal 2",
+  "externalRef": "opcional-idempotente",
+  "purpose": "production"
 }
 ```
 
-**Respuesta:** `202` provisioning (async Green Partner job) or `200`/`201` when idempotent/existing.
+`purpose`: `demo` \| `production`. Si se omite: `production` cuando `commercial_status=active`, si no `demo`.
 
-Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances/{publicId}/qr`, `DELETE /instances/{publicId}`.
+**Abilities:** tokens cliente nuevos (`demo_client_abilities` / activate-plan / issue token) incluyen `instancias.crear`. Tokens emitidos **antes** de este cambio carecen de la ability → **403** hasta reemisión.
+
+**Respuesta:** `202` provisioning (async) o `200` cuando idempotente/existente.
+
+Also implemented: `GET /instances`, `GET /instances/{publicId}`, `GET /instances/{publicId}/qr`, `DELETE /instances/{publicId}` (DELETE sigue plataforma).
+
+**Follow-up (fuera de este repo en esta entrega):**
+- **docsV2:** allowlist POST `/instances` (+ opcional `account/status`), `createInstance`, sandbox UI used/limit, OpenAPI/Postman.
+- **Portal:** mostrar `instances.used`/`limit`; no duplicar enforcement (API es SoT).
 
 ---
 
@@ -481,9 +509,12 @@ Consulta cuota comercial del tenant autenticado: días restantes de demo, mensaj
     "messagesSentThisMonth": 12,
     "messagesRemainingThisMonth": 88,
     "messagesLimitThisMonth": 100
-  }
+  },
+  "instances": { "used": 1, "limit": 3 }
 }
 ```
+
+`instances.limit` puede ser `null` cuando el plan es ilimitado (p. ej. empresa).
 
 **Cuota:** si `messagesSentThisMonth >= messagesLimitThisMonth`, `POST /messages` responde `429` con mensaje de cuota excedida.
 

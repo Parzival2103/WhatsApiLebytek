@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-31  
 **Repo:** WhatsApiLebytek (`api.lebytek.com`)  
-**Status:** Approved design — pending implementation  
+**Status:** Implemented (2026-08-31)  
 **Related:** `2026-06-29-green-api-partner-instances-design.md`, `2026-07-14-plan-activation-and-package-limits-design.md`
 
 ## Problem
