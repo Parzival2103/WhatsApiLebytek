@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Core\Tenant;
+use App\Models\Integration\Instancia;
 use App\Models\Integration\Mensaje;
 use Illuminate\Support\Carbon;
 
@@ -17,6 +18,11 @@ class AccountStatusService
         $messagesSent = $this->countMessagesSentThisMonth($tenant->id);
         $limit = $tenant->messages_monthly_limit;
         $messagesRemaining = $limit !== null ? max(0, $limit - $messagesSent) : null;
+
+        $instancesUsed = Instancia::query()
+            ->withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenant->id)
+            ->count();
 
         $daysRemaining = null;
         $isExpired = false;
@@ -43,6 +49,10 @@ class AccountStatusService
                 'messagesSentThisMonth' => $messagesSent,
                 'messagesRemainingThisMonth' => $messagesRemaining,
                 'messagesLimitThisMonth' => $limit,
+            ],
+            'instances' => [
+                'used' => $instancesUsed,
+                'limit' => $tenant->max_instances,
             ],
         ];
     }
