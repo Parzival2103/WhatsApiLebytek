@@ -24,6 +24,10 @@ API Laravel en **api.lebytek.com**: intermediario **Green API (WhatsApp)**, cola
 
 Implementación guiada por `docs/spec/prompt2-laravel-nucleo.md` (stack, RBAC, multi-tenant, colas, Green API vertical).
 
+## ICM system map (agentes)
+
+Mapa editable de endpoints / cupo / procesos: **`map/CLAUDE.md`**. Empieza ahí (no slurpear todo `map/objects/`).
+
 ## Comandos
 
 ```bash

@@ -37,10 +37,11 @@ Los planes en `docs/superpowers/plans/` **pueden y deben** incluir tasks de ops 
 ## Lectura obligatoria antes de auditar o cambiar código
 
 1. `CLAUDE.md` — límites del producto y comandos
-2. `docs/ARCHITECTURE.md` — mapa del ecosistema
-3. `docs/automation/CONTEXT.md` — contexto ampliado para automatizaciones
-4. `docs/integration/waapi-api-contract.md` — contrato HTTP v1
-5. `docs/DEPLOY.md` — runbook VPS (también ejecutable por el agente en sesión autorizada)
+2. **`map/CLAUDE.md`** — ICM system map (endpoints, cupo instancias, procesos; abre solo la card que necesites)
+3. `docs/ARCHITECTURE.md` — mapa del ecosistema
+4. `docs/automation/CONTEXT.md` — contexto ampliado para automatizaciones
+5. `docs/integration/waapi-api-contract.md` — contrato HTTP v1
+6. `docs/DEPLOY.md` — runbook VPS (también ejecutable por el agente en sesión autorizada)
 
 ## Estructura clave
 
